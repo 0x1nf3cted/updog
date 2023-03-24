@@ -5,6 +5,7 @@
 #include <sys/socket.h>
 #include <unistd.h>
 #include <stdbool.h>
+#include <arpa/inet.h>
 
 #include "client.h"
 
@@ -43,14 +44,21 @@ int start_client(char *adress, int SERVER_PORT)
 
     while (!stop)
     {
-        valread = read(client_sockfd, buffer, 1024);
-        printf("Server: ");
-        printf("%s\n", buffer);
 
         printf("Client: ");
-        scanf("%s", message);
+        scanf("%[^\n]", message);
+        if ((send(client_sockfd, message, strlen(message), 0)) == -1)
+        {
+            stop = true;
+        }
 
-        send(client_sockfd, message, strlen(message), 0);
+        valread = recv(client_sockfd, buffer, 1024, 0);
+        if (valread == -1)
+        {
+            stop = true;
+        }
+        printf("Server: ");
+        printf("%s\n", buffer);
         if (strcmp(message, "/q") == 0)
         {
             stop = true;
@@ -60,5 +68,7 @@ int start_client(char *adress, int SERVER_PORT)
     }
 
     close(client_sockfd);
+    shutdown(client_sockfd, SHUT_RDWR);
+
     return 0;
 }

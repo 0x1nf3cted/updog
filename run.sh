@@ -1,3 +1,3 @@
 #!/bin/sh
 
-cd build && cmake .. && make && ./netcat $1 $2 $3
+cd build && cmake .. && make && ./updog $1 $2 $3

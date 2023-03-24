@@ -5,8 +5,16 @@
 #include <sys/socket.h>
 #include <unistd.h>
 #include <stdbool.h>
+#include <signal.h>
+#include <arpa/inet.h>
 
 #include "server.h"
+
+void handle_signal()
+{
+    printf("chat has ended\n");
+    exit(1);
+}
 
 int start_server(int PORT)
 {
@@ -53,25 +61,27 @@ int start_server(int PORT)
 
     while (!stop)
     {
+        bytesRead = recv(newSocketFileDescriptor, buffer, 1024,0);
+        if(bytesRead == -1){
+            stop = true;
+        }
+        printf("Client: ");
+        printf("%s\n", buffer);
+
         printf("Server: ");
-        scanf("%s", message);
+        scanf("%[^\n]", message);
 
         send(newSocketFileDescriptor, message, strlen(message), 0);
 
-        bytesRead = read(newSocketFileDescriptor, buffer, 1024);
-        printf("Client: ");
-        printf("%s\n", buffer);
         if (strcmp(buffer, "/q") == 0)
         {
             stop = true;
         }
-
         memset(buffer, 0, sizeof(buffer));
         memset(message, 0, sizeof(message));
     }
     free(buffer);
     free(message);
-
 
     close(newSocketFileDescriptor);
     shutdown(serverFileDescriptor, SHUT_RDWR);
