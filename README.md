@@ -51,6 +51,10 @@ or
 ❤️you're more than welcome to contribute❤️
 
 
+### Example:
+
+![video](examples/img.png)
+
 | :exclamation:  this was tested only on linux  |
 |-----------------------------------------|
 
