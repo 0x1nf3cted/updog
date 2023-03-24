@@ -61,10 +61,7 @@ int start_server(int PORT)
 
     while (!stop)
     {
-        bytesRead = recv(newSocketFileDescriptor, buffer, 1024,0);
-        if(bytesRead == -1){
-            stop = true;
-        }
+        bytesRead = read(newSocketFileDescriptor, buffer, 1024);
         printf("Client: ");
         printf("%s\n", buffer);
 

@@ -47,16 +47,10 @@ int start_client(char *adress, int SERVER_PORT)
 
         printf("Client: ");
         scanf("%[^\n]", message);
-        if ((send(client_sockfd, message, strlen(message), 0)) == -1)
-        {
-            stop = true;
-        }
 
-        valread = recv(client_sockfd, buffer, 1024, 0);
-        if (valread == -1)
-        {
-            stop = true;
-        }
+        send(client_sockfd, message, strlen(message), 0);
+
+        valread = read(client_sockfd, buffer, 1024);
         printf("Server: ");
         printf("%s\n", buffer);
         if (strcmp(message, "/q") == 0)
@@ -68,7 +62,5 @@ int start_client(char *adress, int SERVER_PORT)
     }
 
     close(client_sockfd);
-    shutdown(client_sockfd, SHUT_RDWR);
-
     return 0;
 }
