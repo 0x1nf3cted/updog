@@ -9,12 +9,17 @@ Updog is an amateur netcat implementation in c, it can listen to upcoming connec
 -   use the script:
 
 server side : `bash ./run.sh -l [port]`
+
 client side: `bash ./run.sh -c [ipAdress] [port]`
 
 -   build it manually:
+
 `mkdir build`
+
 `cmake ..`
+
 `make`
+
 `./updog`
 
 ## Improvements:
