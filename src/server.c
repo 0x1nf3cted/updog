@@ -61,13 +61,12 @@ int start_server(int PORT)
 
     while (!stop)
     {
-        bytesRead = read(newSocketFileDescriptor, buffer, 1024);
+        read(newSocketFileDescriptor, buffer, 1024);
         printf("Client: ");
         printf("%s\n", buffer);
 
         printf("Server: ");
-        scanf("%[^\n]", message);
-
+        fgets(message, 1024, stdin);
         send(newSocketFileDescriptor, message, strlen(message), 0);
 
         if (strcmp(buffer, "/q") == 0)
@@ -77,8 +76,6 @@ int start_server(int PORT)
         memset(buffer, 0, sizeof(buffer));
         memset(message, 0, sizeof(message));
     }
-    free(buffer);
-    free(message);
 
     close(newSocketFileDescriptor);
     shutdown(serverFileDescriptor, SHUT_RDWR);

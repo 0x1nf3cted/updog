@@ -46,11 +46,11 @@ int start_client(char *adress, int SERVER_PORT)
     {
 
         printf("Client: ");
-        scanf("%[^\n]", message);
+        fgets(message, 1024, stdin);
 
         send(client_sockfd, message, strlen(message), 0);
 
-        valread = read(client_sockfd, buffer, 1024);
+        read(client_sockfd, buffer, 1024);
         printf("Server: ");
         printf("%s\n", buffer);
         if (strcmp(message, "/q") == 0)
