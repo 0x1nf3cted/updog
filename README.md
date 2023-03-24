@@ -2,7 +2,7 @@
 
 ## so what's Updog? (gotcha 😆😆)
 
-Updog is a a netcat implementation in c, it can listen to upcoming connections from 1 client and send then receive messages from the client
+Updog is an amateur netcat implementation in c, it can listen to upcoming connections from 1 client and send then receive messages from the client
 
 ## Run:
 
