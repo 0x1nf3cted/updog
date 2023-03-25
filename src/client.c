@@ -8,6 +8,7 @@
 #include <arpa/inet.h>
 
 #include "client.h"
+#include "utils.h"
 
 void start_client(char *adress, int SERVER_PORT)
 {
@@ -41,22 +42,23 @@ void start_client(char *adress, int SERVER_PORT)
     char buffer[1024] = {0};
     bool stop = false;
     char message[1024];
+    int send_status;
+    int receive_status;
 
     while (!stop)
     {
 
         printf("Client: ");
         fgets(message, 1024, stdin);
+        send_status = send(client_sockfd, message, strlen(message), 0);
+        // stop = check_if_disconnected(message, send_status);
+        stop = strcmp(message, "/q");
 
-        send(client_sockfd, message, strlen(message), 0);
-
-        read(client_sockfd, buffer, 1024);
+        receive_status = read(client_sockfd, buffer, 1024);
         printf("Server: ");
-        printf("%s\n", buffer);
-        if (strcmp(message, "/q") == 0)
-        {
-            stop = true;
-        }
+        printf("%s", buffer);
+        stop = check_if_disconnected(buffer, receive_status);
+
         memset(buffer, 0, sizeof(buffer));
         memset(message, 0, sizeof(message));
     }

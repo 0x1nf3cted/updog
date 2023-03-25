@@ -30,6 +30,10 @@ or
 
 `./updog`
 
+
+
+
+
 ## Improvements:
 
 
@@ -47,6 +51,10 @@ or
 
 -   [ ] stop the connection when the client is inactive for 1min
 -   [ ] allow user to send multiple messages to the server
+
+
+### Todo:
+-   [ ] make the user disconnect when he type /q after ensuring the message was sent succesfully (Bug)
 
 ❤️you're more than welcome to contribute❤️
 

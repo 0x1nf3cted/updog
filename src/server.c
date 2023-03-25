@@ -9,6 +9,7 @@
 #include <arpa/inet.h>
 
 #include "server.h"
+#include "utils.h"
 
 
 void start_server(int PORT)
@@ -53,21 +54,21 @@ void start_server(int PORT)
     char buffer[1024] = {0};
     bool stop = false;
     char message[1024];
+    int send_status;
+    int receive_status;
 
     while (!stop)
     {
-        read(newSocketFileDescriptor, buffer, 1024);
+        receive_status = read(newSocketFileDescriptor, buffer, 1024);
         printf("Client: ");
-        printf("%s\n", buffer);
+        printf("%s", buffer);
+        stop = check_if_disconnected(buffer, receive_status);
 
         printf("Server: ");
         fgets(message, 1024, stdin);
-        send(newSocketFileDescriptor, message, strlen(message), 0);
+        send_status = send(newSocketFileDescriptor, message, strlen(message), 0);
+        stop = check_if_disconnected(message, send_status);
 
-        if (strcmp(buffer, "/q") == 0)
-        {
-            stop = true;
-        }
         memset(buffer, 0, sizeof(buffer));
         memset(message, 0, sizeof(message));
     }
