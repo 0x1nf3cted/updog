@@ -10,6 +10,6 @@
 #include <stdbool.h>
 
 
-int start_server();
+void start_server(int PORT);
 
 #endif /* SERVER_H */

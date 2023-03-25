@@ -10,13 +10,8 @@
 
 #include "server.h"
 
-void handle_signal()
-{
-    printf("chat has ended\n");
-    exit(1);
-}
 
-int start_server(int PORT)
+void start_server(int PORT)
 {
     int bytesRead;
     struct sockaddr_in address;
@@ -79,5 +74,4 @@ int start_server(int PORT)
 
     close(newSocketFileDescriptor);
     shutdown(serverFileDescriptor, SHUT_RDWR);
-    return 0;
 }

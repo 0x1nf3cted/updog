@@ -8,7 +8,7 @@
 int main(int argc, char const *argv[])
 {
     int port = 0;
-    char *adress;
+    char *address;
     bool server = false;
     if (argc > 1)
     {
@@ -20,17 +20,19 @@ int main(int argc, char const *argv[])
         }
         else if (strcmp(argv[1], "-c") == 0 || argc >= 3)
         {
-            adress = malloc(strlen(argv[2]) + 1);
-            strcpy(adress, argv[2]);
+            address = malloc(strlen(argv[2]) + 1);
+            strcpy(address, argv[2]);
             port = atoi(argv[3]);
-            start_client(adress, port);
+            start_client(address, port);
+            free(address);
         }
         else
         {
             printf("Error: could not parse arguments");
+            return -1;
         }
     }
 
-    free(adress);
+    
     return 0;
 }

@@ -9,7 +9,7 @@
 
 #include "client.h"
 
-int start_client(char *adress, int SERVER_PORT)
+void start_client(char *adress, int SERVER_PORT)
 {
 
     int valread, client_sockfd;
@@ -17,7 +17,7 @@ int start_client(char *adress, int SERVER_PORT)
     if ((client_sockfd = socket(AF_INET, SOCK_STREAM, 0)) < 0)
     {
         printf("\n Socket creation error \n");
-        return -1;
+        exit(EXIT_FAILURE);
     }
 
     server_address.sin_family = AF_INET;
@@ -27,7 +27,7 @@ int start_client(char *adress, int SERVER_PORT)
     {
         printf(
             "\nInvalid address/ Address not supported \n");
-        return -1;
+        exit(EXIT_FAILURE);
     }
 
     int status = connect(client_sockfd, (struct sockaddr *)&server_address,
@@ -35,7 +35,7 @@ int start_client(char *adress, int SERVER_PORT)
     if (status == -1)
     {
         printf("\nConnection Failed \n");
-        return -1;
+        exit(EXIT_FAILURE);
     }
 
     char buffer[1024] = {0};
@@ -62,5 +62,4 @@ int start_client(char *adress, int SERVER_PORT)
     }
 
     close(client_sockfd);
-    return 0;
 }

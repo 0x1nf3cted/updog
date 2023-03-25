@@ -9,6 +9,6 @@
 #include <unistd.h>
 
 
-int start_client();
+void start_client(char *adress, int SERVER_PORT);
 
 #endif /* CLIENT_H */
