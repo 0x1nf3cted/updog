@@ -1,8 +1,8 @@
-# Updog 🐶: netcat implementation in c
+# Updog 🐶: nterminal chat app
 
 ## so what's Updog? (gotcha 😆😆)
 
-Updog is an amateur netcat implementation in c, it can listen to upcoming connections from 1 client and send then receive messages from the client
+Updog is a chat app written in c, it can listen to upcoming connections from 1 client and send then receive messages from the client
 
 ## Run:
 
