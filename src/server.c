@@ -35,6 +35,7 @@ void start_server(int PORT)
     if (socketBinding == -1)
     {
         printf("Error: socket bindin failed");
+        close(serverFileDescriptor);
         exit(EXIT_FAILURE);
     }
     if (listen(serverFileDescriptor, 3) < 0)
@@ -47,6 +48,7 @@ void start_server(int PORT)
     if (newSocketFileDescriptor == -1)
     {
         printf("accept");
+        close(serverFileDescriptor);
         exit(EXIT_FAILURE);
     }
     printf("client joined the discussion \n");
@@ -69,8 +71,10 @@ void start_server(int PORT)
         send_status = send(newSocketFileDescriptor, message, strlen(message), 0);
         stop = check_if_disconnected(message, send_status);
 
-        memset(buffer, 0, sizeof(buffer));
-        memset(message, 0, sizeof(message));
+        // memset(buffer, 0, sizeof(buffer));
+        // memset(message, 0, sizeof(message));
+        bzero(buffer, sizeof(buffer));
+        bzero(message, sizeof(message));
     }
 
     close(newSocketFileDescriptor);
