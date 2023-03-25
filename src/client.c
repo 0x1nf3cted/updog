@@ -28,6 +28,7 @@ void start_client(char *adress, int SERVER_PORT)
     {
         printf(
             "\nInvalid address/ Address not supported \n");
+        close(client_sockfd);
         exit(EXIT_FAILURE);
     }
 
@@ -36,6 +37,7 @@ void start_client(char *adress, int SERVER_PORT)
     if (status == -1)
     {
         printf("\nConnection Failed \n");
+        close(client_sockfd);
         exit(EXIT_FAILURE);
     }
 

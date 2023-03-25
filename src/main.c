@@ -14,12 +14,14 @@ int main(int argc, char const *argv[])
     {
         if (strcmp(argv[1], "-l") == 0)
         {
+            system("clear");
             server = true;
             port = atoi(argv[2]);
             start_server(port);
         }
         else if (strcmp(argv[1], "-c") == 0 || argc >= 3)
         {
+            system("clear");
             address = malloc(strlen(argv[2]) + 1);
             strcpy(address, argv[2]);
             port = atoi(argv[3]);
