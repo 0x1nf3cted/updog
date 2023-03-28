@@ -44,7 +44,9 @@ void start_client(char *adress, int SERVER_PORT)
     char buffer[1024] = {0};
     bool stop = false;
     char message[1024];
-    int send_status;
+    int send_status = 0;
+    int last_send_status = 0;
+    bool sent = false;
     int receive_status;
 
     while (!stop)
@@ -52,7 +54,17 @@ void start_client(char *adress, int SERVER_PORT)
 
         printf("Client: ");
         fgets(message, 1024, stdin);
+
+        last_send_status = send_status;
         send_status = send(client_sockfd, message, strlen(message), 0);
+
+        /* If the last message status is different than the status of
+        the message that we just sent, then it was successfully sent. */
+        if (send_status != last_send_status) {
+          sent = true;
+        }
+
+         
         // stop = check_if_disconnected(message, send_status);
         stop = strcmp(message, "/q");
 
