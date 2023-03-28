@@ -51,10 +51,11 @@ void start_client(char *adress, int SERVER_PORT)
 
     while (!stop)
     {
-
+        /* Print the client messages */
         printf("Client: ");
         fgets(message, 1024, stdin);
 
+        /* Save the message status */
         last_send_status = send_status;
         send_status = send(client_sockfd, message, strlen(message), 0);
 
@@ -63,18 +64,22 @@ void start_client(char *adress, int SERVER_PORT)
         if (send_status != last_send_status) {
           sent = true;
         }
-
          
         // stop = check_if_disconnected(message, send_status);
-        //stop = strcmp(message, "/q");
+
+        /* If the user successfully sent "/q", then, disconnect him */
         if (strcmp(message, "/q\n") == 0 && sent == true) {
           stop = 0;
           break;
         }
 
+        /* Save the status of the received message */
         receive_status = read(client_sockfd, buffer, 1024);
+
+        /* Print the server messages */
         printf("Server: ");
         printf("%s", buffer);
+
         stop = check_if_disconnected(buffer, receive_status);
 
         memset(buffer, 0, sizeof(buffer));
