@@ -66,7 +66,11 @@ void start_client(char *adress, int SERVER_PORT)
 
          
         // stop = check_if_disconnected(message, send_status);
-        stop = strcmp(message, "/q");
+        //stop = strcmp(message, "/q");
+        if (strcmp(message, "/q\n") == 0 && sent == true) {
+          stop = 0;
+          break;
+        }
 
         receive_status = read(client_sockfd, buffer, 1024);
         printf("Server: ");
