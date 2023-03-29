@@ -39,10 +39,11 @@ or
 
 -   [x] start a connection between a server and client
 -   [x] send and receive messages
+-   [x] allow multiple clients to connect to a server
+-   [x] allow user to send multiple messages to the server
 
 ### Features:
-
--   [ ] allow multiple clients to connect to a server (create rooms)
+-   [ ] show the username of the client, and the time when the message was sent
 -   [ ] access those rooms with a username and a password
 -   [ ] allow file transfer between client and server
 -   [ ] secure the file transfer process
@@ -50,7 +51,7 @@ or
 ### Enhancement:
 
 -   [ ] stop the connection when the client is inactive for 1min
--   [ ] allow user to send multiple messages to the server
+
 
 
 ### Todo:
@@ -61,7 +62,7 @@ or
 
 ### Example:
 
-![video](examples/img.png)
+![video](examples/example.png)
 
 | :exclamation:  this was tested only on linux  |
 |-----------------------------------------|
