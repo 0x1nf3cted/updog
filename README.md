@@ -62,7 +62,7 @@ or
 
 ### Example:
 
-![video](examples/img.png)
+![video](examples/example.png)
 
 | :exclamation:  this was tested only on linux  |
 |-----------------------------------------|
