@@ -39,8 +39,8 @@ or
 
 -   [x] start a connection between a server and client
 -   [x] send and receive messages
--   [x] allow multiple clients to connect to a server
--   [x] allow user to send multiple messages to the server
+-   [x] multiple clients to connect to a server
+-   [x] user can send multiple messages to the server
 
 ### Features:
 -   [ ] show the username of the client, and the time when the message was sent
