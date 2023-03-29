@@ -1,69 +1,98 @@
-#include <netinet/in.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/socket.h>
-#include <unistd.h>
-#include <stdbool.h>
+#include <sys/select.h>
 #include <arpa/inet.h>
+#include <unistd.h>
 
-#include "client.h"
-#include "utils.h"
-
-void start_client(char *adress, int SERVER_PORT)
+void start_client(char *address, int port)
 {
-
-    int valread, client_sockfd;
-    struct sockaddr_in server_address;
-    if ((client_sockfd = socket(AF_INET, SOCK_STREAM, 0)) < 0)
+    // we create the socket
+    struct sockaddr_in client_addr;
+    socklen_t addr_len = sizeof(client_addr);
+    int sockfd = socket(AF_INET, SOCK_STREAM, 0);
+    if (sockfd == -1)
     {
-        printf("\n Socket creation error \n");
+        perror("socket creation failed");
         exit(EXIT_FAILURE);
     }
 
+    struct sockaddr_in server_address = {0};
     server_address.sin_family = AF_INET;
-    server_address.sin_port = htons(SERVER_PORT);
-
-    if (inet_pton(AF_INET, adress, &server_address.sin_addr) <= 0)
+    server_address.sin_port = htons(port);
+    if (inet_pton(AF_INET, address, &server_address.sin_addr) <= 0)
     {
-        printf(
-            "\nInvalid address/ Address not supported \n");
-        close(client_sockfd);
+        perror("address conversion failed");
+        close(sockfd);
         exit(EXIT_FAILURE);
     }
 
-    int status = connect(client_sockfd, (struct sockaddr *)&server_address,
-                         sizeof(server_address));
-    if (status == -1)
+    if (connect(sockfd, (struct sockaddr *)&server_address, sizeof(server_address)) == -1)
     {
-        printf("\nConnection Failed \n");
-        close(client_sockfd);
+        perror("connection failed");
+        close(sockfd);
         exit(EXIT_FAILURE);
     }
 
     char buffer[1024] = {0};
-    bool stop = false;
-    char message[1024];
-    int send_status;
-    int receive_status;
-
-    while (!stop)
+    char message[1024] = {0};
+    /*this code will bascially use non blocking socket functions to
+    read incoming messages if there are any and to send messages to the server, the server will then broadcast
+    the messages to all the connected clients, except the sender
+    */
+    while (1)
     {
+        fd_set read_fds;
+        FD_ZERO(&read_fds);
+        FD_SET(sockfd, &read_fds);
+        FD_SET(STDIN_FILENO, &read_fds);
 
-        printf("Client: ");
-        fgets(message, 1024, stdin);
-        send_status = send(client_sockfd, message, strlen(message), 0);
-        // stop = check_if_disconnected(message, send_status);
-        stop = strcmp(message, "/q");
+        if (select(sockfd + 1, &read_fds, NULL, NULL, NULL) == -1)
+        {
+            perror("select failed");
+            exit(EXIT_FAILURE);
+        }
 
-        receive_status = read(client_sockfd, buffer, 1024);
-        printf("Server: ");
-        printf("%s", buffer);
-        stop = check_if_disconnected(buffer, receive_status);
+        /* we check if there is some available data to read
+        recvfrom allow you to get the ip of the sender
+        */
+        if (FD_ISSET(sockfd, &read_fds))
+        {
+            int bytes_received = recvfrom(sockfd, buffer, sizeof(buffer), 0, (struct sockaddr *)&client_addr, &addr_len);
+            if (bytes_received <= 0)
+            {
+                printf("Disconnected from server.\n");
+                break;
+            }
+            printf("user%d %s", ntohs(client_addr.sin_port), buffer); // there is a bug here, the port is not the same as the adress port of the client
+            memset(buffer, 0, sizeof(buffer));
+        }
 
-        memset(buffer, 0, sizeof(buffer));
-        memset(message, 0, sizeof(message));
+        /* we check if we are ready to send data
+         */
+
+        if (FD_ISSET(STDIN_FILENO, &read_fds))
+        {
+            if (fgets(message, sizeof(message), stdin) == NULL)
+            {
+                break;
+            }
+            /* there is still a bug here, that need to be fixed
+           sometimes when /q is sent the client disconnect from the server, but other times it crashes the server
+           */
+            if (strcmp(message, "/q\n") == 0)
+            {
+                break;
+            }
+            if (send(sockfd, message, strlen(message), 0) == -1)
+            {
+                perror("send failed");
+                exit(EXIT_FAILURE);
+            }
+            memset(message, 0, sizeof(message));
+        }
     }
 
-    close(client_sockfd);
+    close(sockfd);
 }

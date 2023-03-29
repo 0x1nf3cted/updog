@@ -1,82 +1,124 @@
-#include <netinet/in.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
 #include <sys/socket.h>
-#include <unistd.h>
-#include <stdbool.h>
-#include <signal.h>
+#include <netinet/in.h>
 #include <arpa/inet.h>
+#include <stdio.h>
+#include <string.h>
+#include <unistd.h>
+#include <sys/select.h>
+#include <stdlib.h>
 
-#include "server.h"
-#include "utils.h"
+#define MAX_CLIENTS 10
 
+// this function will add a new client to the list of connected clients
+void add_client_address(struct sockaddr_in adressesArray[MAX_CLIENTS], struct sockaddr_in clientAdress, int currentCLientCount)
+{
+    if (currentCLientCount < 9)
+    {
+        adressesArray[currentCLientCount] = clientAdress;
+    }
+    else
+    {
+        perror("sorry, reached maximum client count");
+    }
+}
 
 void start_server(int PORT)
 {
-    int bytesRead;
-    struct sockaddr_in address;
-    int option = 1;
-    int addressLength = sizeof(address);
+    int server_sockfd = socket(AF_INET, SOCK_STREAM, 0);
 
-    int serverFileDescriptor = socket(AF_INET, SOCK_STREAM, 0);
-    if (serverFileDescriptor == -1)
+    struct sockaddr_in server_addr;
+    server_addr.sin_family = AF_INET;
+    server_addr.sin_port = htons(PORT);
+    server_addr.sin_addr.s_addr = INADDR_ANY;
+    memset(server_addr.sin_zero, 0, sizeof(server_addr.sin_zero));
+
+    bind(server_sockfd, (struct sockaddr *)&server_addr, sizeof(server_addr));
+
+    listen(server_sockfd, MAX_CLIENTS);
+
+    fd_set master_fds;
+    FD_ZERO(&master_fds);
+    FD_SET(server_sockfd, &master_fds);
+    int max_fd = server_sockfd;
+    int currentCLientCount = 0;
+    struct sockaddr_in adressesArray[MAX_CLIENTS];
+    char *clientAdress;
+
+    while (1)
     {
-        perror("Error: failed to create a socket");
-        exit(EXIT_FAILURE);
+        fd_set read_fds = master_fds;
+        if (select(max_fd + 1, &read_fds, NULL, NULL, NULL) == -1)
+        {
+            perror("select");
+            exit(1);
+        }
+
+        for (int fd = 0; fd <= max_fd; fd++)
+        {
+            if (FD_ISSET(fd, &read_fds))
+            {
+                if (fd == server_sockfd)
+                {
+                    // handle new connections
+                    struct sockaddr_in client_addr;
+                    socklen_t client_addr_len = sizeof(client_addr);
+                    int client_sockfd = accept(server_sockfd, (struct sockaddr *)&client_addr, &client_addr_len);
+                    if (client_sockfd == -1)
+                    {
+                        perror("accept");
+                    }
+                    else
+                    {
+                        add_client_address(adressesArray, client_addr, currentCLientCount);
+                        currentCLientCount += 1;
+                        printf("New client connected from %s:%d\n", inet_ntoa(client_addr.sin_addr), ntohs(client_addr.sin_port));
+                        FD_SET(client_sockfd, &master_fds);
+                        if (client_sockfd > max_fd)
+                        {
+                            max_fd = client_sockfd;
+                        }
+                    }
+                }
+                else
+                {
+                    // handle data from a client
+                    char buffer[1024];
+                    int bytes_received = recv(fd, buffer, sizeof(buffer), 0);
+                    if (bytes_received == -1)
+                    {
+                        perror("recv");
+                    }
+                    else if (bytes_received == 0)
+                    {
+                        // connection closed by client
+
+                        printf("Client %s was disconnected\n", inet_ntoa(adressesArray[fd].sin_addr));
+
+                        close(fd);
+                        FD_CLR(fd, &master_fds);
+                    }
+                    else
+                    {
+                        // broadcast the received message to all clients
+                        printf("Received message: %s\n", buffer);
+                        for (int i = 0; i <= max_fd; i++)
+                        {
+                            if (FD_ISSET(i, &master_fds))
+                            {
+                                if (i != server_sockfd && i != fd)
+                                {
+                                    if (send(i, buffer, bytes_received, 0) == -1)
+                                    {
+                                        perror("send");
+                                    }
+                                }
+                            }
+                        }
+                        bzero(buffer, sizeof(buffer));
+                    }
+                }
+            }
+        }
     }
-
-    address.sin_family = AF_INET;
-    address.sin_addr.s_addr = INADDR_ANY;
-    address.sin_port = htons(PORT);
-
-    int socketBinding = bind(serverFileDescriptor, (struct sockaddr *)&address,
-                             sizeof(address));
-    if (socketBinding == -1)
-    {
-        printf("Error: socket bindin failed");
-        close(serverFileDescriptor);
-        exit(EXIT_FAILURE);
-    }
-    if (listen(serverFileDescriptor, 3) < 0)
-    {
-        printf("Listening on port:  %d", PORT);
-        exit(EXIT_FAILURE);
-    }
-    int newSocketFileDescriptor = accept(serverFileDescriptor, (struct sockaddr *)&address,
-                                         (socklen_t *)&addressLength);
-    if (newSocketFileDescriptor == -1)
-    {
-        printf("accept");
-        close(serverFileDescriptor);
-        exit(EXIT_FAILURE);
-    }
-    printf("client joined the discussion \n");
-
-    char buffer[1024] = {0};
-    bool stop = false;
-    char message[1024];
-    int send_status;
-    int receive_status;
-
-    while (!stop)
-    {
-        receive_status = read(newSocketFileDescriptor, buffer, 1024);
-        printf("Client: ");
-        printf("%s", buffer);
-        stop = check_if_disconnected(buffer, receive_status);
-
-        printf("Server: ");
-        fgets(message, 1024, stdin);
-        send_status = send(newSocketFileDescriptor, message, strlen(message), 0);
-        stop = check_if_disconnected(message, send_status);
-
-        // memset(buffer, 0, sizeof(buffer));
-        // memset(message, 0, sizeof(message));
-        bzero(buffer, sizeof(buffer));
-        bzero(message, sizeof(message));
-    }
-
-    close(newSocketFileDescriptor);
-    shutdown(serverFileDescriptor, SHUT_RDWR);
+    close(server_sockfd);
 }
