@@ -41,16 +41,14 @@ or
 -   [x] send and receive messages
 -   [x] multiple clients to connect to a server
 -   [x] user can send multiple messages to the server
+-   [x] stop the connection when the client is inactive for 1min
+
 
 ### Features:
 -   [ ] show the username of the client, and the time when the message was sent
 -   [ ] access those rooms with a username and a password
 -   [ ] allow file transfer between client and server
 -   [ ] secure the file transfer process
-
-### Enhancement:
-
--   [ ] stop the connection when the client is inactive for 1min
 
 
 
