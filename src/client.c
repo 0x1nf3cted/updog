@@ -6,17 +6,53 @@
 #include <arpa/inet.h>
 #include <unistd.h>
 #include <time.h> 
+#include <ncurses.h>
 
-#define TIMEOUT_DURATION 60 
+#define TIMEOUT_DURATION 60
+
+typedef struct {
+    int width, height;
+    WINDOW *border_window, *window;
+} BorderedWindow;
+
+BorderedWindow message_window, input_window;
+int sockfd;
+
+void init_bordered_window(BorderedWindow *window, int x, int y, int width, int height)
+{
+    window->border_window = newwin(height, width, y, x);
+    box(window->border_window, 0, 0);
+    wrefresh(window->border_window);
+    window->window = newwin(height-2, width-2, y+1, x+1);
+    scrollok(window->window, true);
+    wrefresh(window->window);
+}
+
+void initialize_ncurses()
+{
+    initscr();
+    refresh();
+    init_bordered_window(&message_window, 0, 0, COLS, LINES-5);
+    init_bordered_window(&input_window, 0, LINES-5, COLS, 5);
+    // TODO: reconstruct the windows if the console gets resized
+}
+
+void finalize()
+{
+    close(sockfd);
+    endwin();
+}
 
 void start_client(char *address, int port)
 {
+    initialize_ncurses();
     // we create the socket
     struct sockaddr_in client_addr;
     socklen_t addr_len = sizeof(client_addr);
-    int sockfd = socket(AF_INET, SOCK_STREAM, 0);
+    sockfd = socket(AF_INET, SOCK_STREAM, 0);
     if (sockfd == -1)
     {
+        finalize();
         perror("socket creation failed");
         exit(EXIT_FAILURE);
     }
@@ -26,20 +62,21 @@ void start_client(char *address, int port)
     server_address.sin_port = htons(port);
     if (inet_pton(AF_INET, address, &server_address.sin_addr) <= 0)
     {
+        finalize();
         perror("address conversion failed");
-        close(sockfd);
         exit(EXIT_FAILURE);
     }
 
     if (connect(sockfd, (struct sockaddr *)&server_address, sizeof(server_address)) == -1)
     {
+        finalize();
         perror("connection failed");
-        close(sockfd);
         exit(EXIT_FAILURE);
     }
 
     char buffer[1024] = {0};
     char message[1024] = {0};
+    int message_position = 0;
     
     /*this code will bascially use non blocking socket functions to
     read incoming messages if there are any and to send messages to the server, the server will then broadcast
@@ -60,6 +97,7 @@ void start_client(char *address, int port)
 
         if (select(sockfd + 1, &read_fds, NULL, NULL, &timeout) == -1)
         {
+            finalize();
             perror("select failed");
             exit(EXIT_FAILURE);
         }
@@ -84,7 +122,13 @@ void start_client(char *address, int port)
                 printf("Disconnected from server.\n");
                 break;
             }
-            printf("user%d %s", ntohs(client_addr.sin_port), buffer); // there is a bug here, the port is not the same as the adress port of the client
+            wprintw(message_window.window, "<user%d>: %s", ntohs(client_addr.sin_port), buffer);
+            // there is a bug here, the port is not the same as the adress port of the client
+            // TODO: add port or other identifier to the message on the server, as client_addr.sin_port is the server connection port
+            wrefresh(message_window.window);
+            // move cursor to input_window
+            wprintw(input_window.window, " \b");
+            wrefresh(input_window.window);
             memset(buffer, 0, sizeof(buffer));
             start_time = current_time;
         }
@@ -94,10 +138,31 @@ void start_client(char *address, int port)
 
         if (FD_ISSET(STDIN_FILENO, &read_fds))
         {
-            if (fgets(message, sizeof(message), stdin) == NULL)
+            char c = wgetch(input_window.window);
+            if (c == '\b' || c == 127)
             {
-                break;
+                wprintw(input_window.window, "\b\b  \b\b");
+                if (message_position != 0)
+                {
+                    wprintw(input_window.window, "\b  \b\b");
+                    message[message_position--] = 0;
+                }
+                wrefresh(input_window.window);
+            } else {
+                message[message_position++] = c;
             }
+            if (c != '\n')
+            {
+                continue;
+            }
+            
+            message[message_position] = 0;
+            
+            werase(input_window.window);
+            wprintw(message_window.window, "you: %s", message);
+            wrefresh(message_window.window);
+            wprintw(input_window.window, " \b");
+            wrefresh(input_window.window);
             /* there is still a bug here, that need to be fixed
            sometimes when /q is sent the client disconnect from the server, but other times it crashes the server
            */
@@ -111,10 +176,10 @@ void start_client(char *address, int port)
                 exit(EXIT_FAILURE);
             }
             memset(message, 0, sizeof(message));
+            message_position = 0;
             start_time = current_time;
             elapsed_time = 0;
         }
     }
-
-    close(sockfd);
+    finalize();
 }
