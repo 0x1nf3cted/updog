@@ -14,8 +14,21 @@
 
 BorderedWindow message_window, input_window;
 int sockfd;
+MessageQueue all_messages;
 
-void sendMessage(char *message) {
+void add_message(char *message)
+{
+    MessageNode *node = malloc(sizeof(MessageNode));
+    
+    int length = strlen(message);
+    node->message = malloc(length + 1);
+    memcpy(node->message, message, length+1);
+
+    TAILQ_INSERT_TAIL(&all_messages, node, nodes);
+}
+
+void send_message(char *message)
+{
     /* 
      * there is still a bug here, that need to be fixed
      * sometimes when /q is sent the client disconnected
@@ -33,7 +46,6 @@ void sendMessage(char *message) {
         perror("send failed");
         exit(EXIT_FAILURE);
     }
-    memset(message, 0, sizeof(message));
 }
 
 void finalize()
@@ -44,6 +56,8 @@ void finalize()
 
 void start_client(char *address, int port)
 {
+    TAILQ_INIT(&all_messages);
+
     pthread_t tui_tread_id;
     pthread_create(&tui_tread_id, NULL, TUI_main, NULL);
     
@@ -128,6 +142,7 @@ void start_client(char *address, int port)
                 printf("Disconnected from server.\n");
                 break;
             }
+            add_message(buffer);
             wprintw(message_window.window, "<user%d>: %s", ntohs(client_addr.sin_port), buffer);
             // there is a bug here, the port is not the same as the adress port of the client
             // TODO: add port or other identifier to the message on the server, as client_addr.sin_port is the server connection port
