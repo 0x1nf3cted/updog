@@ -7,20 +7,16 @@
 #include <sys/socket.h>
 #include <unistd.h>
 #include <time.h> 
-#include <ncurses.h>
-#include <signal.h>
 #include <pthread.h>
+#include <signal.h>
+#include "client.h"
 
 #define TIMEOUT_DURATION 60
-
-typedef struct {
-    int width, height;
-    WINDOW *border_window, *window;
-} BorderedWindow;
 
 BorderedWindow message_window, input_window;
 int sockfd;
 
+<<<<<<< HEAD
 void init_bordered_window(BorderedWindow *window, int x, int y, int width, int height)
 {
     window->border_window = newwin(height, width, y, x);
@@ -45,6 +41,27 @@ void handle_resize()
     endwin();
     initialize_ncurses();
     // TODO: print old messages
+=======
+void sendMessage(char *message) {
+    /* 
+     * there is still a bug here, that need to be fixed
+     * sometimes when /q is sent the client disconnected
+     * from the server, but other times it crashes the server
+     */
+    if (strcmp(message, "/q\n") == 0)
+    {
+        finalize();
+        perror("exting on user request");
+        exit(EXIT_SUCCESS);
+    }
+    if (send(sockfd, message, strlen(message), 0) == -1)
+    {
+        finalize();
+        perror("send failed");
+        exit(EXIT_FAILURE);
+    }
+    memset(message, 0, sizeof(message));
+>>>>>>> 9774d50 (refactor client source: seperate source file for TUI)
 }
 
 void finalize()
@@ -53,73 +70,21 @@ void finalize()
     endwin();
 }
 
-void *TUI_thread(void *vargp)
-{
-    initialize_ncurses();
-    char message[1024] = {0};
-    int message_position = 0;
-    while (1)
-    {
-        char c = wgetch(input_window.window);
-        if (c == '\b' || c == 127)
-        {
-            wprintw(input_window.window, "\b\b  \b\b");
-            if (message_position != 0)
-            {
-                wprintw(input_window.window, "\b  \b\b");
-                message[message_position--] = 0;
-            }
-            wrefresh(input_window.window);
-        } else if (c == KEY_RESIZE || c == -102)
-        {
-            handle_resize();
-            wprintw(input_window.window, message);
-        } else
-        {
-            message[message_position++] = c;
-        }
-        if (c != '\n')
-        {
-            continue;
-        }    
-        message[message_position] = 0;    
-        werase(input_window.window);
-        wprintw(message_window.window, "you: %s", message);
-        wrefresh(message_window.window);
-        /* 
-         * there is still a bug here, that need to be fixed
-         * sometimes when /q is sent the client disconnected
-         * from the server, but other times it crashes the server
-         */
-        if (strcmp(message, "/q\n") == 0)
-        {
-            return NULL;
-        }
-        if (send(sockfd, message, strlen(message), 0) == -1)
-        {
-            perror("send failed");
-            exit(EXIT_FAILURE);
-        }
-        memset(message, 0, sizeof(message));
-        message_position = 0;
-    }
-    return NULL;
-}
-
 void start_client(char *address, int port)
 {
     pthread_t tui_tread_id;
-    pthread_create(&tui_tread_id, NULL, TUI_thread, NULL);
+    pthread_create(&tui_tread_id, NULL, TUI_main, NULL);
     
+    // SIGWINCH is handeled and processed by ncurses
     sigset_t sigmask;
     sigemptyset(&sigmask);
     sigaddset(&sigmask, SIGWINCH);
+    sigprocmask(SIG_BLOCK, &sigmask, NULL);
     
     // we create the socket
     struct sockaddr_in client_addr;
     socklen_t addr_len = sizeof(client_addr);
     sockfd = socket(AF_INET, SOCK_STREAM, 0);
-    sigprocmask(SIG_BLOCK, &sigmask, NULL);
 
     if (sockfd == -1)
     {
