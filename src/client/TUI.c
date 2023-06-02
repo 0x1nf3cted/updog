@@ -22,7 +22,12 @@ void handle_resize(char *message)
 {
     endwin();
     initialize_ncurses();
-    // TODO: print old messages
+    MessageNode *message_node;
+    TAILQ_FOREACH(message_node, &all_messages, nodes)
+    {
+        wprintw(message_window.window, message_node->message);
+    }
+    wrefresh(message_window.window);
     wprintw(input_window.window, message);
 }
 
@@ -58,7 +63,8 @@ void *TUI_main(void *vargp)
         werase(input_window.window);
         wprintw(message_window.window, "you: %s", message);
         wrefresh(message_window.window);
-        sendMessage(message);
+        send_message(message);
+        memset(message, 0, sizeof(message));
         message_position = 0;
     }
     return NULL;

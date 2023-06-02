@@ -15,34 +15,21 @@
 
 BorderedWindow message_window, input_window;
 int sockfd;
+MessageQueue all_messages;
 
-<<<<<<< HEAD
-void init_bordered_window(BorderedWindow *window, int x, int y, int width, int height)
+void add_message(char *message)
 {
-    window->border_window = newwin(height, width, y, x);
-    box(window->border_window, 0, 0);
-    wrefresh(window->border_window);
-    window->window = newwin(height - 2, width - 2, y + 1, x + 1);
-    scrollok(window->window, true);
-    wrefresh(window->window);
+    MessageNode *node = malloc(sizeof(MessageNode));
+    
+    int length = strlen(message);
+    node->message = malloc(length + 1);
+    memcpy(node->message, message, length+1);
+
+    TAILQ_INSERT_TAIL(&all_messages, node, nodes);
 }
 
-void initialize_ncurses()
+void send_message(char *message)
 {
-    initscr();
-    refresh();
-    init_bordered_window(&message_window, 0, 0, COLS, LINES - 5);
-    init_bordered_window(&input_window, 0, LINES - 5, COLS, 5);
-    // TODO: reconstruct the windows if the console gets resized
-}
-
-void handle_resize()
-{
-    endwin();
-    initialize_ncurses();
-    // TODO: print old messages
-=======
-void sendMessage(char *message) {
     /* 
      * there is still a bug here, that need to be fixed
      * sometimes when /q is sent the client disconnected
@@ -60,8 +47,6 @@ void sendMessage(char *message) {
         perror("send failed");
         exit(EXIT_FAILURE);
     }
-    memset(message, 0, sizeof(message));
->>>>>>> 9774d50 (refactor client source: seperate source file for TUI)
 }
 
 void finalize()
@@ -72,6 +57,8 @@ void finalize()
 
 void start_client(char *address, int port)
 {
+    TAILQ_INIT(&all_messages);
+
     pthread_t tui_tread_id;
     pthread_create(&tui_tread_id, NULL, TUI_main, NULL);
     
