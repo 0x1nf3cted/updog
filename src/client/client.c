@@ -57,17 +57,9 @@ void finalize()
 
 void start_client(char *address, int port)
 {
+    initialize_ncurses();
     TAILQ_INIT(&all_messages);
 
-    pthread_t tui_tread_id;
-    pthread_create(&tui_tread_id, NULL, TUI_main, NULL);
-    
-    // SIGWINCH is handeled and processed by ncurses
-    sigset_t sigmask;
-    sigemptyset(&sigmask);
-    sigaddset(&sigmask, SIGWINCH);
-    sigprocmask(SIG_BLOCK, &sigmask, NULL);
-    
     // we create the socket
     struct sockaddr_in client_addr;
     socklen_t addr_len = sizeof(client_addr);
@@ -98,9 +90,7 @@ void start_client(char *address, int port)
     }
 
     char buffer[1024] = {0};
-    char message[1024] = {0};
     char username[1024] = {0};
-    int message_position = 0;
 
     int username_ok = 0;
 
@@ -110,8 +100,8 @@ void start_client(char *address, int port)
     while (username_ok == 0) {
         werase(input_window.window);
         wrefresh(input_window.window);
-        wscanw(input_window.window, "%s", username);
-
+        wgetstr(input_window.window, username);
+        
         if (send(sockfd, username, strlen(username), 0) == -1) {
             wprintw(message_window.window,
                     "Failed to send username. Please try again.\n");
@@ -128,6 +118,15 @@ void start_client(char *address, int port)
     werase(input_window.window);
     wrefresh(input_window.window);
 
+    pthread_t tui_tread_id;
+    pthread_create(&tui_tread_id, NULL, TUI_main, NULL);
+    
+    // SIGWINCH is handeled and processed by ncurses
+    sigset_t sigmask;
+    sigemptyset(&sigmask);
+    sigaddset(&sigmask, SIGWINCH);
+    sigprocmask(SIG_BLOCK, &sigmask, NULL);
+    
     /*this code will bascially use non blocking socket functions to
     read incoming messages if there are any and to send messages to the server, the server will then broadcast
     the messages to all the connected clients, except the sender

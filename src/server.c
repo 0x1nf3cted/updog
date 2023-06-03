@@ -29,13 +29,11 @@ const char *get_time() {
 // this function will send to all the client, the message written
 void send_message_to_all_clients(Client clientsArray[MAX_CLIENTS],
         int senderSockfd, const char *message,
-        int currentClientCount) {
+        int currentClientCount, char *pseudo) {
     for (int i = 0; i < currentClientCount; i++) {
-        if (clientsArray[i].sockfd != senderSockfd) {
-            char buffer[1024];
-            sprintf(buffer, "[%s] say: %s\n", clientsArray[i].pseudo, message);
-            send(clientsArray[i].sockfd, buffer, strlen(buffer), 0);
-        }
+        char buffer[1024];
+        sprintf(buffer, "[%s]: %s\n", pseudo, message);
+        send(clientsArray[i].sockfd, buffer, strlen(buffer), 0);
     }
 }
 
@@ -159,7 +157,7 @@ void start_server(int port) {
                                         ntohs(clientsArray[i].client_addr.sin_port), buffer);
                                 send_message_to_all_clients(clientsArray,
                                         clientsArray[i].sockfd, buffer,
-                                        currentClientCount);
+                                        currentClientCount, clientsArray[i].pseudo);
                                 break;
                             }
                         }
