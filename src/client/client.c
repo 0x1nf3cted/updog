@@ -143,9 +143,7 @@ void start_client(char *address, int port)
                 break;
             }
             add_message(buffer);
-            wprintw(message_window.window, "<user%d>: %s", ntohs(client_addr.sin_port), buffer);
-            // there is a bug here, the port is not the same as the adress port of the client
-            // TODO: add port or other identifier to the message on the server, as client_addr.sin_port is the server connection port
+            wprintw(message_window.window, buffer);
             wrefresh(message_window.window);
             wrefresh(input_window.window);
             memset(buffer, 0, sizeof(buffer));
@@ -153,4 +151,5 @@ void start_client(char *address, int port)
         }
     }
     finalize();
+    exit(EXIT_SUCCESS);
 }

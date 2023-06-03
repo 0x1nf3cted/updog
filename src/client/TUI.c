@@ -29,6 +29,7 @@ void handle_resize(char *message)
     }
     wrefresh(message_window.window);
     wprintw(input_window.window, message);
+    wrefresh(input_window.window);
 }
 
 void *TUI_main(void *vargp)
@@ -61,8 +62,6 @@ void *TUI_main(void *vargp)
         }
         message[message_position] = 0;    
         werase(input_window.window);
-        wprintw(message_window.window, "you: %s", message);
-        wrefresh(message_window.window);
         send_message(message);
         memset(message, 0, sizeof(message));
         message_position = 0;

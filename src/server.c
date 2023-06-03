@@ -82,7 +82,7 @@ void start_server(int PORT)
                 else
                 {
                     // handle data from a client
-                    char buffer[1024];
+                    char buffer[1024], message[1024];
                     int bytes_received = recv(fd, buffer, sizeof(buffer), 0);
                     if (bytes_received == -1)
                     {
@@ -99,19 +99,20 @@ void start_server(int PORT)
                     }
                     else
                     {
+                        // TODO: timestamp
+                        sprintf(message, "<user%i>: %s", fd, buffer);
+                        int message_length = strlen(message);
+                        printf(message);
                         // broadcast the received message to all clients
-                        printf("Received message: %s\n", buffer);
                         for (int i = 0; i <= max_fd; i++)
                         {
-                            if (FD_ISSET(i, &master_fds))
+                            if (!FD_ISSET(i, &master_fds) || i == server_sockfd)
                             {
-                                if (i != server_sockfd && i != fd)
-                                {
-                                    if (send(i, buffer, bytes_received, 0) == -1)
-                                    {
-                                        perror("send");
-                                    }
-                                }
+                                continue;
+                            }
+                            if (send(i, message, message_length + 1, 0) == -1)
+                            {
+                                perror("send");
                             }
                         }
                         bzero(buffer, sizeof(buffer));
