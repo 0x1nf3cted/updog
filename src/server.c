@@ -76,22 +76,27 @@ void start_server(int port) {
     int currentClientCount = 0;
     Client clientsArray[MAX_CLIENTS];
 
-    while (1) {
+    while (1)
+    {
         fd_set read_fds = master_fds;
-        if (select(max_fd + 1, &read_fds, NULL, NULL, NULL) == -1) {
+        if (select(max_fd + 1, &read_fds, NULL, NULL, NULL) == -1)
+        {
             perror("select");
             exit(1);
         }
 
-        for (int fd = 0; fd <= max_fd; fd++) {
-            if (FD_ISSET(fd, &read_fds)) {
-                if (fd == server_sockfd) {
+        for (int fd = 0; fd <= max_fd; fd++)
+        {
+            if (FD_ISSET(fd, &read_fds))
+            {
+                if (fd == server_sockfd)
+                {
                     // handle new connections
                     struct sockaddr_in client_addr;
                     socklen_t client_addr_len = sizeof(client_addr);
-                    int client_sockfd = accept(
-                            server_sockfd, (struct sockaddr *)&client_addr, &client_addr_len);
-                    if (client_sockfd == -1) {
+                    int client_sockfd = accept(server_sockfd, (struct sockaddr *)&client_addr, &client_addr_len);
+                    if (client_sockfd == -1)
+                    {
                         perror("accept");
                     } else {
                         char buffer[1024];
@@ -112,13 +117,18 @@ void start_server(int port) {
                             close(client_sockfd);
                         }
                     }
-                } else {
+                }
+                else
+                {
                     // handle data from a client
-                    char buffer[1024];
+                    char buffer[1024], message[1024];
                     int bytes_received = recv(fd, buffer, sizeof(buffer), 0);
-                    if (bytes_received == -1) {
+                    if (bytes_received == -1)
+                    {
                         perror("recv");
-                    } else if (bytes_received == 0) {
+                    }
+                    else if (bytes_received == 0)
+                    {
                         // connection closed by client
                         struct sockaddr_in client_addr;
                         socklen_t client_addr_len = sizeof(client_addr);

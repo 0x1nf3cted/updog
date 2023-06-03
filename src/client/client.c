@@ -172,8 +172,8 @@ void start_client(char *address, int port)
                 printf("Disconnected from server.\n");
                 break;
             }
+            add_message(buffer);
             wprintw(message_window.window, buffer);
-
             wrefresh(message_window.window);
             // move cursor to input_window
             wrefresh(input_window.window);
@@ -182,4 +182,5 @@ void start_client(char *address, int port)
         }
     }
     finalize();
+    exit(EXIT_SUCCESS);
 }
