@@ -41,18 +41,44 @@ void send_message(char *message)
         perror("exting on user request");
         exit(EXIT_SUCCESS);
     }
-    if (send(sockfd, message, strlen(message), 0) == -1)
-    {
-        finalize();
-        perror("send failed");
-        exit(EXIT_FAILURE);
-    }
+    send_message_packet(sockfd, message);
 }
 
 void finalize()
 {
     close(sockfd);
     endwin();
+}
+
+void send_username() {
+    char username[1024] = {0};
+
+    int username_ok = 0;
+
+    wprintw(message_window.window, "Enter your username:\n");
+    wrefresh(message_window.window);
+
+    while (username_ok == 0) {
+        werase(input_window.window);
+        wrefresh(input_window.window);
+        wgetstr(input_window.window, username);
+        
+        if (send(sockfd, username, strlen(username), 0) == -1) {
+            wprintw(message_window.window,
+                    "Failed to send username. Please try again.\n");
+            wrefresh(message_window.window);
+            memset(username, '\0', sizeof(username));
+        } else {
+            username_ok = 1;
+        }
+    }
+
+    wprintw(message_window.window, "Your username is %s\n", username);
+    wrefresh(message_window.window);
+
+    werase(input_window.window);
+    wrefresh(input_window.window);
+
 }
 
 void start_client(char *address, int port)
@@ -90,34 +116,6 @@ void start_client(char *address, int port)
     }
 
     char buffer[1024] = {0};
-    char username[1024] = {0};
-
-    int username_ok = 0;
-
-    wprintw(message_window.window, "Enter your username:\n");
-    wrefresh(message_window.window);
-
-    while (username_ok == 0) {
-        werase(input_window.window);
-        wrefresh(input_window.window);
-        wgetstr(input_window.window, username);
-        
-        if (send(sockfd, username, strlen(username), 0) == -1) {
-            wprintw(message_window.window,
-                    "Failed to send username. Please try again.\n");
-            wrefresh(message_window.window);
-            memset(username, '\0', sizeof(username));
-        } else {
-            username_ok = 1;
-        }
-    }
-
-    wprintw(message_window.window, "Your username is %s\n", username);
-    wrefresh(message_window.window);
-
-    werase(input_window.window);
-    wrefresh(input_window.window);
-
     pthread_t tui_tread_id;
     pthread_create(&tui_tread_id, NULL, TUI_main, NULL);
     
