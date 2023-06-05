@@ -17,7 +17,7 @@
 extern void send_message_packet(int fd, char *message);
 
 #define NOTIFY_MESSAGE_PACKET(T)                                \
-    T(U16,      userId);                                        \
+    T(U16,      user_id);                                       \
     T(STRING,   message);
 
 extern void notify_message_packet(int fd, int user_id, char *message);
@@ -51,6 +51,7 @@ typedef struct {
     void  (*insert)(void *, va_list);
     void *(*read)(void *);
     void  (*handle)(void *, Client *);
+    void  (*handle_client)(void *);
     void  (*destroy)(void *);
 } PacketClass;
 

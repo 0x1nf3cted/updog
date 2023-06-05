@@ -34,6 +34,7 @@ void handle_resize(char *message)
 
 void *TUI_main(void *vargp)
 {
+    initialize_ncurses();
     char message[1024] = {0};
     int message_position = 0;
     while (1)
