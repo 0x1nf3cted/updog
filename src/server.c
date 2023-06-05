@@ -55,13 +55,8 @@ void add_client(Client clientsArray[MAX_CLIENTS], int sockfd,
     }
 }
 
-typedef struct {
-    char *message;
-} __attribute__((packed))  SendMessageData;
-
 void client_handler(int fd)
 {
-    printf("client %i accepted\n", fd);
     PacketHeader packet_header;
     while (1)
     {
@@ -71,7 +66,6 @@ void client_handler(int fd)
             // TODO: broadcast disconnect message
             return;
         }
-        printf("packet in from client %i (type: %i, length: %i)\n", fd, packet_header.type, packet_header.length);
         void *buffer = malloc(packet_header.length);
         if (recv(fd, buffer, packet_header.length, MSG_WAITALL) != packet_header.length)
         {
@@ -81,16 +75,26 @@ void client_handler(int fd)
         }
         PacketClass *class = packet_classes[packet_header.type];
         void *packet_data = class->read(buffer);
-        switch (packet_header.type)
+        if (class->handle)
         {
-        case SEND_MESSAGE:
-            printf("client %i sent message: %s\n", fd, ((SendMessageData *)packet_data)->message);
+            class->handle(packet_data);
         }
         free(packet_data);
     }
 }
 
+void on_message(SEND_MESSAGE_DATA *data)
+{
+    printf("received message %s\n", data->message);
+}
+
+void setup_server_handlers()
+{
+    packet_classes[SEND_MESSAGE]->handle = (void(*)(void*)) (void*)on_message;
+}
+
 void start_server(int port) {
+    setup_server_handlers();
     int server_sockfd = socket(AF_INET, SOCK_STREAM, 0);
 
     struct sockaddr_in client_addr;

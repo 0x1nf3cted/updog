@@ -4,10 +4,16 @@
 #include <sys/socket.h>
 #include <stdio.h>
 
-extern PacketClass PACKET_TYPES(, _PACKET_CLASS, COMMA);
+void send_message_packet(int fd, char *message)
+{
+    send_packet(fd, SEND_MESSAGE, message);
+}
 
+PACKET_TYPES(CLASS, )
+
+#define CLASS_NAME(class) &class##_CLASS
 PacketClass *packet_classes[] = {
-    PACKET_TYPES(&, _PACKET_CLASS, COMMA)
+    PACKET_TYPES(CLASS_NAME, COMMA)
 };
 
 
@@ -38,67 +44,72 @@ void send_packet(int sockfd, PacketType type, ...)
     }
 }
 
-void STRING_LENGTH(int *size, uintptr_t string)
+inline int STRING_LENGTH(char *string)
 {
-    *size += strlen((char *) string) + sizeof(uint16_t);
+    return strlen(string) + sizeof(uint16_t);
 }
 
-void STRING_INSERT(void **buffer, uintptr_t data)
+void STRING_INSERT(char ***buffer, char *string)
 {
-    char *string = (char *)data;
     int count = strlen(string);
     uint16_t **length = (void *) buffer;
     **length = count;
-    *buffer += sizeof(uint16_t);
-    char **write = (void *) buffer;
+    (*length)++;
+    char **buffer_string = (void *)buffer;
     for (int i = 0; i < count; i++) {
-        (*write)[i] = string[i];
+        **buffer_string = string[i];
+        (*buffer_string)++;
     }
-    *write += count;
 }
 
-void STRING_READ(uint8_t **buffer, uintptr_t **data)
+char *STRING_READ(char ***data)
 {
-    int size = *((uint16_t *)*buffer);
-    *buffer += sizeof(uint16_t);
-    char *string = malloc(size + 10);
+    uint16_t **length = (void*) data;
+    int size = **length;
+    (*length)++;
+    char **buffer_string = (void *) data;
+    char *string = malloc(size + 1);
     for (int i = 0; i < size; i++)
     {
-        string[i] = *((char *)*buffer);
-        (*buffer)++;
+        string[i] = **buffer_string;
+        (*buffer_string)++;
     }
     string[size] = 0;
-    **data = (uintptr_t)(void *)string;
-    (*data)++;
+    return string;
 }
 
-void U8_LENGTH(int *size, uintptr_t data)
+inline int U8_LENGTH(uint8_t data)
 {
-    *size += sizeof(uint8_t);
+    return sizeof(uint8_t);
 }
 
-void U8_INSERT(uint8_t **buffer, uintptr_t data)
+void U8_INSERT(uint8_t **buffer, uint8_t data)
 {
-    **buffer = (uint8_t) data;
-    *buffer++;
+    **buffer = data;
+    (*buffer)++;
 }
 
-void U16_LENGTH(int *size, uintptr_t data)
+uint16_t U8_READ(uint8_t **buffer)
 {
-    *size += sizeof(uint8_t);
+    uint8_t value = **buffer;
+    (*buffer)++;
+    return value;
 }
 
-void U16_INSERT(uint16_t **buffer, uintptr_t data)
+inline int U16_LENGTH(uint16_t data)
 {
-    **buffer = (uint16_t) data;
-    *buffer++;
+    return sizeof(uint8_t);
 }
 
-void U16_READ(void **buffer, void ***data)
+void U16_INSERT(uint16_t **buffer, uint16_t data)
 {
-    //TODO
-    //uint16_t value = *((uint16_t *)*buffer);
-    //*buffer += sizeof(uint16_t);
-    //**data = (void*)(uintptr_t) value;
-    //*data++;
+    **buffer = data;
+    (*buffer)++;
+}
+
+uint16_t U16_READ(uint16_t **buffer)
+{
+    uint16_t value = **buffer;
+    (*buffer)++;
+    return value;
 }
