@@ -49,9 +49,9 @@ void client_handler(Client *client)
         }
         PacketClass *class = packet_classes[packet_header.type];
         void *packet_data = class->read(buffer);
-        if (class->handle)
+        if (class->handle_server)
         {
-            class->handle(packet_data, client);
+            class->handle_server(packet_data, client);
         }
         free(packet_data);
     }
@@ -70,7 +70,7 @@ void on_message(SEND_MESSAGE_DATA *data, Client *sender)
 
 void setup_server_handlers()
 {
-    packet_classes[SEND_MESSAGE]->handle = (void(*)(void*, Client *)) (void*)on_message;
+    packet_classes[SEND_MESSAGE]->handle_server = (void(*)(void*, Client *)) (void*)on_message;
 }
 
 void start_server(int port) {

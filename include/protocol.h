@@ -50,7 +50,7 @@ typedef struct {
     int   (*length)(va_list);
     void  (*insert)(void *, va_list);
     void *(*read)(void *);
-    void  (*handle)(void *, Client *);
+    void  (*handle_server)(void *, Client *);
     void  (*handle_client)(void *);
     void  (*destroy)(void *);
 } PacketClass;

@@ -103,7 +103,7 @@ uint16_t U8_READ(uint8_t **buffer)
 
 inline int U16_LENGTH(uint16_t data)
 {
-    return sizeof(uint8_t);
+    return sizeof(uint16_t);
 }
 
 void U16_INSERT(uint16_t **buffer, uint16_t data)

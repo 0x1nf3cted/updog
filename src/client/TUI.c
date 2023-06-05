@@ -49,10 +49,15 @@ void *TUI_main(void *vargp)
                 message[message_position--] = 0;
             }
             wrefresh(input_window.window);
-        } else if (c == KEY_RESIZE || c == -102)
+        }
+        else if (c == KEY_RESIZE || c == -102)
         {
             handle_resize(message);
-        } else
+        }
+        else if (c == '\n')
+        {
+        }
+        else
         {
             message[message_position++] = c;
         }

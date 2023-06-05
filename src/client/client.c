@@ -53,7 +53,8 @@ void finalize()
     endwin();
 }
 
-void on_notify_message(NOTIFY_MESSAGE_DATA *data) {
+void on_notify_message(NOTIFY_MESSAGE_DATA *data)
+{
     char *buffer;
     asprintf(&buffer, "<User%i>: %s\n", data->user_id, data->message);
     add_message(buffer);
@@ -76,7 +77,7 @@ void start_client(char *address, int port)
     setup_client_handlers();
     TAILQ_INIT(&all_messages);
 
-    // we create the socket
+    // create the socket
     struct sockaddr_in client_addr;
     socklen_t addr_len = sizeof(client_addr);
     sockfd = socket(AF_INET, SOCK_STREAM, 0);
@@ -115,11 +116,6 @@ void start_client(char *address, int port)
     sigaddset(&sigmask, SIGWINCH);
     sigprocmask(SIG_BLOCK, &sigmask, NULL);
     
-
-    /*this code will bascially use non blocking socket functions to
-    read incoming messages if there are any and to send messages to the server, the server will then broadcast
-    the messages to all the connected clients, except the sender
-    */
 
     PacketHeader packet_header;
     while (1)
