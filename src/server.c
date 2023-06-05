@@ -3,20 +3,11 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <sys/select.h>
-#include <sys/socket.h>
 #include <time.h>
 #include <unistd.h>
 #include "protocol.h"
-#include <pthread.h>
 
-#define MAX_CLIENTS 10
-
-typedef struct {
-    struct sockaddr_in client_addr;
-    int sockfd;
-    char pseudo[20];
-} Client;
+ClientList clients;
 
 // This function retrieves the current time.
 const char *get_time() {
@@ -28,48 +19,31 @@ const char *get_time() {
     return s_now;
 }
 
-// this function will send to all the client, the message written
-void send_message_to_all_clients(Client clientsArray[MAX_CLIENTS],
-        int senderSockfd, const char *message,
-        int currentClientCount, char *pseudo) {
-    for (int i = 0; i < currentClientCount; i++) {
-        char buffer[1024];
-        sprintf(buffer, "[%s]: %s\n", pseudo, message);
-        send(clientsArray[i].sockfd, buffer, strlen(buffer), 0);
-    }
-}
-
 // this function will add a new client to the list of connected clients
-void add_client(Client clientsArray[MAX_CLIENTS], int sockfd,
-        const char *pseudo, struct sockaddr_in client_addr,
-        int *currentClientCount) {
-    if (*currentClientCount < MAX_CLIENTS) {
-        Client newClient;
-        newClient.sockfd = sockfd;
-        newClient.client_addr = client_addr;
-        strcpy(newClient.pseudo, pseudo);
-        clientsArray[*currentClientCount] = newClient;
-        (*currentClientCount)++;
-    } else {
-        perror("Désolé, nombre maximum de clients atteint");
-    }
+Client *create_client(int sockfd, struct sockaddr_in client_addr) {
+    Client *client = malloc(sizeof(Client));
+    client->fd = sockfd;
+    client->id = sockfd; // TODO
+    client->address = client_addr;
+    TAILQ_INSERT_TAIL(&clients, client, nodes);
+    return client;
 }
 
-void client_handler(int fd)
+void client_handler(Client *client)
 {
     PacketHeader packet_header;
     while (1)
     {
-        if (recv(fd, &packet_header, sizeof(PacketHeader), MSG_WAITALL) != sizeof(PacketHeader))
+        if (recv(client->fd, &packet_header, sizeof(PacketHeader), MSG_WAITALL) != sizeof(PacketHeader))
         {
-            printf("client %i disconnected\n", fd);
+            printf("client %i disconnected\n", client->id);
             // TODO: broadcast disconnect message
             return;
         }
         void *buffer = malloc(packet_header.length);
-        if (recv(fd, buffer, packet_header.length, MSG_WAITALL) != packet_header.length)
+        if (recv(client->fd, buffer, packet_header.length, MSG_WAITALL) != packet_header.length)
         {
-            printf("client %i disconnected\n", fd);
+            printf("client %i disconnected\n", client->id);
             // TODO: broadcast disconnect message
             return;
         }
@@ -77,23 +51,30 @@ void client_handler(int fd)
         void *packet_data = class->read(buffer);
         if (class->handle)
         {
-            class->handle(packet_data);
+            class->handle(packet_data, client);
         }
         free(packet_data);
     }
 }
 
-void on_message(SEND_MESSAGE_DATA *data)
+void on_message(SEND_MESSAGE_DATA *data, Client *sender)
 {
-    printf("received message %s\n", data->message);
+    printf("Client %i: %s\n", sender->id, data->message);
+    Client *client;
+    TAILQ_FOREACH(client, &clients, nodes)
+    {
+        notify_message_packet(client->fd, sender->id, data->message);
+    }
+    free(data->message);
 }
 
 void setup_server_handlers()
 {
-    packet_classes[SEND_MESSAGE]->handle = (void(*)(void*)) (void*)on_message;
+    packet_classes[SEND_MESSAGE]->handle = (void(*)(void*, Client *)) (void*)on_message;
 }
 
 void start_server(int port) {
+    TAILQ_INIT(&clients);
     setup_server_handlers();
     int server_sockfd = socket(AF_INET, SOCK_STREAM, 0);
 
@@ -106,19 +87,16 @@ void start_server(int port) {
 
     bind(server_sockfd, (struct sockaddr *)&server_addr, sizeof(server_addr));
 
-    listen(server_sockfd, MAX_CLIENTS);
+    listen(server_sockfd, 10);
 
     fd_set master_fds;
     FD_ZERO(&master_fds);
     FD_SET(server_sockfd, &master_fds);
-    int max_fd = server_sockfd;
-    int currentClientCount = 0;
-    Client clientsArray[MAX_CLIENTS];
-
+    
     while (1)
     {
         fd_set read_fds = master_fds;
-        if (select(max_fd + 1, &read_fds, NULL, NULL, NULL) == -1)
+        if (select(server_sockfd + 1, &read_fds, NULL, NULL, NULL) == -1)
         {
             perror("select");
             exit(1);
@@ -132,92 +110,8 @@ void start_server(int port) {
                 perror("accept");
                 continue;
             }
-            pthread_t client_thread;
-            pthread_create(&client_thread, NULL, (void *)client_handler, (void *)(uintptr_t)client_sockfd);
-        }
-        continue;
-
-        for (int fd = 0; fd <= max_fd; fd++)
-        {
-            if (FD_ISSET(fd, &read_fds))
-            {
-                if (fd == server_sockfd)
-                {
-                    // handle new connections
-                    struct sockaddr_in client_addr;
-                    socklen_t client_addr_len = sizeof(client_addr);
-                    int client_sockfd = accept(server_sockfd, (struct sockaddr *)&client_addr, &client_addr_len);
-                    if (client_sockfd == -1)
-                    {
-                        perror("accept");
-                    } else {
-                        char buffer[1024];
-                        int bytes_received = recv(client_sockfd, buffer, sizeof(buffer), 0);
-                        if (bytes_received > 0) {
-                            buffer[bytes_received] = '\0';
-                            printf("New client connected from %s:%d with pseudo: %s\n",
-                                    inet_ntoa(client_addr.sin_addr),
-                                    ntohs(client_addr.sin_port), buffer);
-                            add_client(clientsArray, client_sockfd, buffer, client_addr,
-                                    &currentClientCount);
-                            FD_SET(client_sockfd, &master_fds);
-                            if (client_sockfd > max_fd) {
-                                max_fd = client_sockfd;
-                            }
-                        } else {
-                            perror("recv");
-                            close(client_sockfd);
-                        }
-                    }
-                }
-                else
-                {
-                    // handle data from a client
-                    char buffer[1024], message[1024];
-                    int bytes_received = recv(fd, buffer, sizeof(buffer), 0);
-                    if (bytes_received == -1)
-                    {
-                        perror("recv");
-                    }
-                    else if (bytes_received == 0)
-                    {
-                        // connection closed by client
-                        struct sockaddr_in client_addr;
-                        socklen_t client_addr_len = sizeof(client_addr);
-                        getpeername(fd, (struct sockaddr *)&client_addr, &client_addr_len);
-
-                        for (int i = 0; i < currentClientCount; i++) {
-                            if (clientsArray[i].sockfd == fd) {
-                                printf("Client %s:%d disconnected\n", clientsArray[i].pseudo,
-                                        ntohs(client_addr.sin_port));
-                                close(fd);
-                                FD_CLR(fd, &master_fds);
-                                for (int j = i; j < currentClientCount - 1; j++) {
-                                    clientsArray[j] = clientsArray[j + 1];
-                                }
-                                currentClientCount--;
-                                break;
-                            }
-                        }
-                    } else {
-                        const char *current_time = get_time();
-                        buffer[bytes_received] = '\0';
-                        for (int i = 0; i < currentClientCount; i++) {
-                            if (clientsArray[i].sockfd == fd) {
-                                // broadcast the received message to all client
-                                printf("At %s (%s) (Ip %s:%d) say : %s\n", current_time,
-                                        clientsArray[i].pseudo,
-                                        inet_ntoa(clientsArray[i].client_addr.sin_addr),
-                                        ntohs(clientsArray[i].client_addr.sin_port), buffer);
-                                send_message_to_all_clients(clientsArray,
-                                        clientsArray[i].sockfd, buffer,
-                                        currentClientCount, clientsArray[i].pseudo);
-                                break;
-                            }
-                        }
-                    }
-                }
-            }
+            Client *client = create_client(client_sockfd, client_addr);
+            pthread_create(&client->thread, NULL, (void *)client_handler, client);
         }
     }
     close(server_sockfd);

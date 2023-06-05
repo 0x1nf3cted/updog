@@ -5,6 +5,7 @@
 #include <stdbool.h>
 #include <stdarg.h>
 #include <stdlib.h>
+#include "server.h"
 
 #define PACKET_TYPES(T, s)                                      \
     T(SEND_MESSAGE) s                                           \
@@ -19,6 +20,7 @@ extern void send_message_packet(int fd, char *message);
     T(U16,      userId);                                        \
     T(STRING,   message);
 
+extern void notify_message_packet(int fd, int user_id, char *message);
 
 #define DATATYPES(T)                                            \
     T(U16, uint16_t)                                            \
@@ -48,7 +50,7 @@ typedef struct {
     int   (*length)(va_list);
     void  (*insert)(void *, va_list);
     void *(*read)(void *);
-    void  (*handle)(void *);
+    void  (*handle)(void *, Client *);
     void  (*destroy)(void *);
 } PacketClass;
 

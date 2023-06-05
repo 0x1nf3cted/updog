@@ -9,6 +9,11 @@ void send_message_packet(int fd, char *message)
     send_packet(fd, SEND_MESSAGE, message);
 }
 
+void notify_message_packet(int fd, int user_id, char *message)
+{
+    send_packet(fd, NOTIFY_MESSAGE, user_id, message);
+}
+
 PACKET_TYPES(CLASS, )
 
 #define CLASS_NAME(class) &class##_CLASS
