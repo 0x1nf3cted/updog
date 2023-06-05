@@ -7,6 +7,8 @@
 #include <sys/socket.h>
 #include <time.h>
 #include <unistd.h>
+#include "protocol.h"
+#include <pthread.h>
 
 #define MAX_CLIENTS 10
 
@@ -53,6 +55,41 @@ void add_client(Client clientsArray[MAX_CLIENTS], int sockfd,
     }
 }
 
+typedef struct {
+    char *message;
+} __attribute__((packed))  SendMessageData;
+
+void client_handler(int fd)
+{
+    printf("client %i accepted\n", fd);
+    PacketHeader packet_header;
+    while (1)
+    {
+        if (recv(fd, &packet_header, sizeof(PacketHeader), MSG_WAITALL) != sizeof(PacketHeader))
+        {
+            printf("client %i disconnected\n", fd);
+            // TODO: broadcast disconnect message
+            return;
+        }
+        printf("packet in from client %i (type: %i, length: %i)\n", fd, packet_header.type, packet_header.length);
+        void *buffer = malloc(packet_header.length);
+        if (recv(fd, buffer, packet_header.length, MSG_WAITALL) != packet_header.length)
+        {
+            printf("client %i disconnected\n", fd);
+            // TODO: broadcast disconnect message
+            return;
+        }
+        PacketClass *class = packet_classes[packet_header.type];
+        void *packet_data = class->read(buffer);
+        switch (packet_header.type)
+        {
+        case SEND_MESSAGE:
+            printf("client %i sent message: %s\n", fd, ((SendMessageData *)packet_data)->message);
+        }
+        free(packet_data);
+    }
+}
+
 void start_server(int port) {
     int server_sockfd = socket(AF_INET, SOCK_STREAM, 0);
 
@@ -82,6 +119,19 @@ void start_server(int port) {
             perror("select");
             exit(1);
         }
+        if (FD_ISSET(server_sockfd, &read_fds)) {
+            struct sockaddr_in client_addr;
+            socklen_t client_addr_len = sizeof(client_addr);
+            int client_sockfd = accept(server_sockfd, (struct sockaddr *)&client_addr, &client_addr_len);
+            if (client_sockfd == -1)
+            {
+                perror("accept");
+                continue;
+            }
+            pthread_t client_thread;
+            pthread_create(&client_thread, NULL, (void *)client_handler, (void *)(uintptr_t)client_sockfd);
+        }
+        continue;
 
         for (int fd = 0; fd <= max_fd; fd++)
         {

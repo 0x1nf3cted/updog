@@ -44,20 +44,34 @@ extern PacketClass *packet_classes[];
         class(_INSERT((void *)&buffer, va_arg(args, uintptr_t)));    \
     }
 
-#define CLASS(class)                                        \
+#define READ_FUNCTION(class, structure)                     \
+    void *class##_READ(uint8_t *buffer) {                   \
+        uintptr_t *data = malloc(sizeof(structure));        \
+        uintptr_t *write = data;                            \
+        class(_READ(&buffer, &write));                      \
+        return data;                                        \
+    }
+
+#define CLASS(class, structure)                             \
     LENGTH_FUNCTION(class)                                  \
     INSERT_FUNCTION(class)                                  \
+    READ_FUNCTION(class, structure)                         \
     PacketClass class##_CLASS = {                           \
         .length = class##_LENGTH,                           \
-        .insert = class##_INSERT                            \
+        .insert = class##_INSERT,                           \
+        .read = class##_READ,                               \
     };
 
 extern void STRING_LENGTH(int *size, uintptr_t string);
 extern void STRING_INSERT(void **buffer, uintptr_t data);
+extern void STRING_READ(uint8_t **buffer, uintptr_t **data);
+
 extern void U8_LENGTH(int *size, uintptr_t data);
 extern void U8_INSERT(uint8_t **buffer, uintptr_t data);
+
 extern void U16_LENGTH(int *size, uintptr_t data);
 extern void U16_INSERT(uint16_t **buffer, uintptr_t data);
+// extern void U16_READ(void **buffer, void ***data);
 
 extern void send_packet(int sockfd, PacketType type, ...);
 
