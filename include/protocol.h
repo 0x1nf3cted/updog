@@ -40,7 +40,7 @@ extern void notify_connect_packet(int fd, int user_id);
 
 #define HEARTBEAT_PACKET(T)
 
-extern void heartbeat_packet(int fd, int user_id);
+extern void heartbeat_packet(int fd);
 
 #define DATATYPES(T)                                            \
     T(U16, uint16_t)                                            \

@@ -24,6 +24,11 @@ void notify_connect_packet(int fd, int user_id)
     send_packet(fd, NOTIFY_CONNECT, user_id);
 }
 
+void heartbeat_packet(int fd)
+{
+    send_packet(fd, HEARTBEAT);
+}
+
 PACKET_TYPES(CLASS, )
 
 #define CLASS_NAME(class) &class##_CLASS

@@ -112,12 +112,11 @@ void check_heartbeats()
 {
     time_t current_time;
     time(&current_time);
-    printf("checking heartbeats...\n");
 
     Client *client;
     TAILQ_FOREACH(client, &clients, nodes)
     {
-        if (current_time - client->last_heartbeat > PULSE_TIME) {
+        if (current_time - client->last_heartbeat > 2*PULSE_TIME) {
             pthread_cancel(client->thread);
             disconnect_client(client);
         }
