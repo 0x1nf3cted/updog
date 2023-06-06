@@ -7,11 +7,15 @@
 #include <stdlib.h>
 #include "server.h"
 
+// a client should send a HEARTBEAT every PULSE_TIME secons
+#define PULSE_TIME 5
+
 #define PACKET_TYPES(T, s)                                      \
     T(SEND_MESSAGE) s                                           \
     T(NOTIFY_MESSAGE) s                                         \
     T(NOTIFY_DISCONNECT) s                                      \
-    T(NOTIFY_CONNECT)
+    T(NOTIFY_CONNECT) s                                         \
+    T(HEARTBEAT)
 
 #define SEND_MESSAGE_PACKET(T)                                  \
     T(STRING,   message);
@@ -33,6 +37,10 @@ extern void notify_disconnect_packet(int fd, int user_id);
     T(U16,      user_id);
 
 extern void notify_connect_packet(int fd, int user_id);
+
+#define HEARTBEAT_PACKET(T)
+
+extern void heartbeat_packet(int fd, int user_id);
 
 #define DATATYPES(T)                                            \
     T(U16, uint16_t)                                            \

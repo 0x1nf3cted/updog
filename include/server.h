@@ -10,13 +10,14 @@
 #include <sys/select.h>
 #include <sys/queue.h>
 #include <pthread.h>
+#include <time.h>
 
 typedef struct ClientStruct {
     int fd, id;
     char *displayName;
     struct sockaddr_in address;
     pthread_t thread;
-    // last heartbeat time
+    time_t last_heartbeat;
     // username
     // ...
     TAILQ_ENTRY(ClientStruct) nodes;
