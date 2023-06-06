@@ -32,9 +32,12 @@ DATATYPES(DATATYPE_DEF)
 #define COMMA ,
 
 #define IDENT(x) x
-typedef enum : uint8_t {
-    PACKET_TYPES(IDENT, COMMA)
-} PacketType;
+enum {
+    PACKET_TYPES(IDENT, COMMA),
+    PACKET_MAX
+};
+
+typedef uint8_t PacketType;
 
 #define STRUCT_LINE(type, name) type name
 #define STRUCT(class)                                           \

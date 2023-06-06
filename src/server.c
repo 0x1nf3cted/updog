@@ -37,15 +37,17 @@ void client_handler(Client *client)
         if (recv(client->fd, &packet_header, sizeof(PacketHeader), MSG_WAITALL) != sizeof(PacketHeader))
         {
             printf("client %i disconnected\n", client->id);
-            // TODO: broadcast disconnect message
-            return;
+            break;
         }
         void *buffer = malloc(packet_header.length);
         if (recv(client->fd, buffer, packet_header.length, MSG_WAITALL) != packet_header.length)
         {
             printf("client %i disconnected\n", client->id);
-            // TODO: broadcast disconnect message
-            return;
+            break;
+        }
+        if (packet_header.type >= PACKET_MAX) {
+            printf("client %i protocol error: unknown packet type\n");
+            break;
         }
         PacketClass *class = packet_classes[packet_header.type];
         void *packet_data = class->read(buffer);
@@ -55,6 +57,11 @@ void client_handler(Client *client)
         }
         free(packet_data);
     }
+    // TODO: broadcast disconnect message
+    TAILQ_REMOVE(&clients, client, nodes);
+    close(client->fd);
+    // TODO: free client name, ...
+    free(client);
 }
 
 void on_message(SEND_MESSAGE_DATA *data, Client *sender)
