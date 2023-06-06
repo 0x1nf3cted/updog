@@ -66,9 +66,21 @@ void on_notify_message(NOTIFY_MESSAGE_DATA *data)
     wrefresh(input_window.window);
 }
 
+void on_notify_disconnect(NOTIFY_DISCONNECT_DATA *data)
+{
+    char *buffer;
+    asprintf(&buffer, "User%i left\n", data->user_id);
+    add_message(buffer);
+    wprintw(message_window.window, buffer);
+    wrefresh(message_window.window);
+
+    wrefresh(input_window.window);
+}
+
 void setup_client_handlers()
 {
     packet_classes[NOTIFY_MESSAGE]->handle_client = (void(*)(void*)) (void*)on_notify_message;
+    packet_classes[NOTIFY_DISCONNECT]->handle_client = (void(*)(void*)) (void*)on_notify_disconnect;
 }
 
 

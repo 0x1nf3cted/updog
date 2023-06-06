@@ -29,6 +29,15 @@ Client *create_client(int sockfd, struct sockaddr_in client_addr) {
     return client;
 }
 
+void disconnect_client(Client *disconnected_client)
+{
+    Client *client;
+    TAILQ_FOREACH(client, &clients, nodes)
+    {
+        notify_disconnect_packet(client->fd, disconnected_client->id);
+    }
+}
+
 void client_handler(Client *client)
 {
     PacketHeader packet_header;
@@ -59,6 +68,7 @@ void client_handler(Client *client)
     }
     // TODO: broadcast disconnect message
     TAILQ_REMOVE(&clients, client, nodes);
+    disconnect_client(client);
     close(client->fd);
     // TODO: free client name, ...
     free(client);
