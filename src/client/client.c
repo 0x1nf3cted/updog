@@ -23,12 +23,13 @@ MessageQueue all_messages;
 void add_message(char *message)
 {
     MessageNode *node = malloc(sizeof(MessageNode));
-    
-    int length = strlen(message);
-    node->message = malloc(length + 1);
-    memcpy(node->message, message, length+1);
-
+    node->message = message;
     TAILQ_INSERT_TAIL(&all_messages, node, nodes);
+
+    wprintw(message_window.window, message);
+    wrefresh(message_window.window);
+
+    wrefresh(input_window.window);
 }
 
 void send_message(char *message)
@@ -58,12 +59,6 @@ void on_notify_message(NOTIFY_MESSAGE_DATA *data)
     char *buffer;
     asprintf(&buffer, "<User%i>: %s\n", data->user_id, data->message);
     add_message(buffer);
-    wprintw(message_window.window, buffer);
-    wrefresh(message_window.window);
-    free(data->message);
-    
-    // move cursor to input_window
-    wrefresh(input_window.window);
 }
 
 void on_notify_disconnect(NOTIFY_DISCONNECT_DATA *data)
@@ -71,10 +66,6 @@ void on_notify_disconnect(NOTIFY_DISCONNECT_DATA *data)
     char *buffer;
     asprintf(&buffer, "User%i left\n", data->user_id);
     add_message(buffer);
-    wprintw(message_window.window, buffer);
-    wrefresh(message_window.window);
-
-    wrefresh(input_window.window);
 }
 
 void setup_client_handlers()
