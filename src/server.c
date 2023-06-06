@@ -25,7 +25,15 @@ Client *create_client(int sockfd, struct sockaddr_in client_addr) {
     client->fd = sockfd;
     client->id = sockfd; // TODO
     client->address = client_addr;
+    
+    Client *current_client;
+    TAILQ_FOREACH(current_client, &clients, nodes)
+    {
+        notify_connect_packet(current_client->fd, client->id);
+    }
+
     TAILQ_INSERT_TAIL(&clients, client, nodes);
+    
     return client;
 }
 
@@ -41,6 +49,8 @@ void disconnect_client(Client *disconnected_client)
 void client_handler(Client *client)
 {
     PacketHeader packet_header;
+    printf("client %i connected\n", client->id);
+   
     while (1)
     {
         if (recv(client->fd, &packet_header, sizeof(PacketHeader), MSG_WAITALL) != sizeof(PacketHeader))
@@ -66,7 +76,6 @@ void client_handler(Client *client)
         }
         free(packet_data);
     }
-    // TODO: broadcast disconnect message
     TAILQ_REMOVE(&clients, client, nodes);
     disconnect_client(client);
     close(client->fd);

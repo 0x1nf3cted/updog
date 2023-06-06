@@ -10,7 +10,8 @@
 #define PACKET_TYPES(T, s)                                      \
     T(SEND_MESSAGE) s                                           \
     T(NOTIFY_MESSAGE) s                                         \
-    T(NOTIFY_DISCONNECT)
+    T(NOTIFY_DISCONNECT) s                                      \
+    T(NOTIFY_CONNECT)
 
 #define SEND_MESSAGE_PACKET(T)                                  \
     T(STRING,   message);
@@ -27,6 +28,11 @@ extern void notify_message_packet(int fd, int user_id, char *message);
     T(U16,      user_id);
 
 extern void notify_disconnect_packet(int fd, int user_id);
+
+#define NOTIFY_CONNECT_PACKET(T)                                \
+    T(U16,      user_id);
+
+extern void notify_connect_packet(int fd, int user_id);
 
 #define DATATYPES(T)                                            \
     T(U16, uint16_t)                                            \
