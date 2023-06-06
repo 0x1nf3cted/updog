@@ -11,6 +11,7 @@ include_directories(${CURSES_INCLUDE_DIR})
 FILE(GLOB_RECURSE sources src/*.c)
 add_executable(updog ${sources})
 
+set_property(TARGET updog PROPERTY C_STANDARD 99)
 target_include_directories(updog PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 
 target_link_libraries(updog PUBLIC pthread ${CURSES_LIBRARY})

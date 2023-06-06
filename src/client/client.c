@@ -1,3 +1,5 @@
+#define _GNU_SOURCE
+
 #include <arpa/inet.h>
 #include <ncurses.h>
 #include <stdio.h>
@@ -10,6 +12,7 @@
 #include <pthread.h>
 #include <signal.h>
 #include "client.h"
+#include "protocol.h"
 
 #define TIMEOUT_DURATION 60
 
@@ -41,12 +44,7 @@ void send_message(char *message)
         perror("exting on user request");
         exit(EXIT_SUCCESS);
     }
-    if (send(sockfd, message, strlen(message), 0) == -1)
-    {
-        finalize();
-        perror("send failed");
-        exit(EXIT_FAILURE);
-    }
+    send_message_packet(sockfd, message);
 }
 
 void finalize()
@@ -55,12 +53,31 @@ void finalize()
     endwin();
 }
 
+void on_notify_message(NOTIFY_MESSAGE_DATA *data)
+{
+    char *buffer;
+    asprintf(&buffer, "<User%i>: %s\n", data->user_id, data->message);
+    add_message(buffer);
+    wprintw(message_window.window, buffer);
+    wrefresh(message_window.window);
+    free(data->message);
+    
+    // move cursor to input_window
+    wrefresh(input_window.window);
+}
+
+void setup_client_handlers()
+{
+    packet_classes[NOTIFY_MESSAGE]->handle_client = (void(*)(void*)) (void*)on_notify_message;
+}
+
+
 void start_client(char *address, int port)
 {
-    initialize_ncurses();
+    setup_client_handlers();
     TAILQ_INIT(&all_messages);
 
-    // we create the socket
+    // create the socket
     struct sockaddr_in client_addr;
     socklen_t addr_len = sizeof(client_addr);
     sockfd = socket(AF_INET, SOCK_STREAM, 0);
@@ -90,95 +107,35 @@ void start_client(char *address, int port)
     }
 
     char buffer[1024] = {0};
-    char username[1024] = {0};
-
-    int username_ok = 0;
-
-    wprintw(message_window.window, "Enter your username:\n");
-    wrefresh(message_window.window);
-
-    while (username_ok == 0) {
-        werase(input_window.window);
-        wrefresh(input_window.window);
-        wgetstr(input_window.window, username);
-        
-        if (send(sockfd, username, strlen(username), 0) == -1) {
-            wprintw(message_window.window,
-                    "Failed to send username. Please try again.\n");
-            wrefresh(message_window.window);
-            memset(username, '\0', sizeof(username));
-        } else {
-            username_ok = 1;
-        }
-    }
-
-    wprintw(message_window.window, "Your username is %s\n", username);
-    wrefresh(message_window.window);
-
-    werase(input_window.window);
-    wrefresh(input_window.window);
-
     pthread_t tui_tread_id;
     pthread_create(&tui_tread_id, NULL, TUI_main, NULL);
     
-    // SIGWINCH is handeled and processed by ncurses
+    // SIGWINCH is handeled and processed by ncurses, don't want it in any other threads
     sigset_t sigmask;
     sigemptyset(&sigmask);
     sigaddset(&sigmask, SIGWINCH);
     sigprocmask(SIG_BLOCK, &sigmask, NULL);
     
-    /*this code will bascially use non blocking socket functions to
-    read incoming messages if there are any and to send messages to the server, the server will then broadcast
-    the messages to all the connected clients, except the sender
-    */
 
-    time_t start_time = time(NULL); // Get the starting timestamp
-
+    PacketHeader packet_header;
     while (1)
     {
-        fd_set read_fds;
-        FD_ZERO(&read_fds);
-        FD_SET(sockfd, &read_fds);
-
-        struct timeval timeout;
-        timeout.tv_sec = TIMEOUT_DURATION;
-        timeout.tv_usec = 0;
-
-        if (select(sockfd + 1, &read_fds, NULL, NULL, &timeout) == -1)
+        if (recv(sockfd, &packet_header, sizeof(PacketHeader), MSG_WAITALL) != sizeof(PacketHeader))
         {
-            finalize();
-            perror("select failed");
-            exit(EXIT_FAILURE);
-        }
-        // TODO: remove timeout (should definetly not be the responsibility of the client)?
-        time_t current_time = time(NULL); // Get the current timestamp
-        time_t elapsed_time = current_time - start_time; // Calculate the elapsed time
-
-        // Check if the elapsed time exceeds the timeout duration
-        if (elapsed_time >= TIMEOUT_DURATION)
-        {
-            printf("Client is inactive for one minute. Client is ejected from the server.\n");
             break;
         }
-        /* we check if there is some available data to read
-        recvfrom allow you to get the ip of the sender
-        */
-        if (FD_ISSET(sockfd, &read_fds))
+        void *buffer = malloc(packet_header.length);
+        if (recv(sockfd, buffer, packet_header.length, MSG_WAITALL) != packet_header.length)
         {
-            int bytes_received = recvfrom(sockfd, buffer, sizeof(buffer), 0, (struct sockaddr *)&client_addr, &addr_len);
-            if (bytes_received <= 0)
-            {
-                printf("Disconnected from server.\n");
-                break;
-            }
-            add_message(buffer);
-            wprintw(message_window.window, buffer);
-            wrefresh(message_window.window);
-            // move cursor to input_window
-            wrefresh(input_window.window);
-            memset(buffer, 0, sizeof(buffer));
-            start_time = current_time;
+            break;
         }
+        PacketClass *class = packet_classes[packet_header.type];
+        void *packet_data = class->read(buffer);
+        if (class->handle_client)
+        {
+            class->handle_client(packet_data);
+        }
+        free(packet_data);
     }
     finalize();
     exit(EXIT_SUCCESS);

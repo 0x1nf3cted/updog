@@ -34,6 +34,7 @@ void handle_resize(char *message)
 
 void *TUI_main(void *vargp)
 {
+    initialize_ncurses();
     char message[1024] = {0};
     int message_position = 0;
     while (1)
@@ -48,10 +49,15 @@ void *TUI_main(void *vargp)
                 message[message_position--] = 0;
             }
             wrefresh(input_window.window);
-        } else if (c == KEY_RESIZE || c == -102)
+        }
+        else if (c == KEY_RESIZE || c == -102)
         {
             handle_resize(message);
-        } else
+        }
+        else if (c == '\n')
+        {
+        }
+        else
         {
             message[message_position++] = c;
         }
