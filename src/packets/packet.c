@@ -14,6 +14,16 @@ void notify_message_packet(int fd, int user_id, char *message)
     send_packet(fd, NOTIFY_MESSAGE, user_id, message);
 }
 
+void notify_disconnect_packet(int fd, int user_id)
+{
+    send_packet(fd, NOTIFY_DISCONNECT, user_id);
+}
+
+void notify_connect_packet(int fd, int user_id)
+{
+    send_packet(fd, NOTIFY_CONNECT, user_id);
+}
+
 PACKET_TYPES(CLASS, )
 
 #define CLASS_NAME(class) &class##_CLASS

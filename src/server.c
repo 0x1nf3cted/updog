@@ -25,27 +25,48 @@ Client *create_client(int sockfd, struct sockaddr_in client_addr) {
     client->fd = sockfd;
     client->id = sockfd; // TODO
     client->address = client_addr;
+    
+    Client *current_client;
+    TAILQ_FOREACH(current_client, &clients, nodes)
+    {
+        notify_connect_packet(current_client->fd, client->id);
+    }
+
     TAILQ_INSERT_TAIL(&clients, client, nodes);
+    
     return client;
+}
+
+void disconnect_client(Client *disconnected_client)
+{
+    Client *client;
+    TAILQ_FOREACH(client, &clients, nodes)
+    {
+        notify_disconnect_packet(client->fd, disconnected_client->id);
+    }
 }
 
 void client_handler(Client *client)
 {
     PacketHeader packet_header;
+    printf("client %i connected\n", client->id);
+   
     while (1)
     {
         if (recv(client->fd, &packet_header, sizeof(PacketHeader), MSG_WAITALL) != sizeof(PacketHeader))
         {
             printf("client %i disconnected\n", client->id);
-            // TODO: broadcast disconnect message
-            return;
+            break;
         }
         void *buffer = malloc(packet_header.length);
         if (recv(client->fd, buffer, packet_header.length, MSG_WAITALL) != packet_header.length)
         {
             printf("client %i disconnected\n", client->id);
-            // TODO: broadcast disconnect message
-            return;
+            break;
+        }
+        if (packet_header.type >= PACKET_MAX) {
+            printf("client %i protocol error: unknown packet type\n");
+            break;
         }
         PacketClass *class = packet_classes[packet_header.type];
         void *packet_data = class->read(buffer);
@@ -55,6 +76,11 @@ void client_handler(Client *client)
         }
         free(packet_data);
     }
+    TAILQ_REMOVE(&clients, client, nodes);
+    disconnect_client(client);
+    close(client->fd);
+    // TODO: free client name, ...
+    free(client);
 }
 
 void on_message(SEND_MESSAGE_DATA *data, Client *sender)
