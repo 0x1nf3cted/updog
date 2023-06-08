@@ -67,7 +67,7 @@ void on_notify_connect(NOTIFY_DISCONNECT_DATA *data)
 void on_notify_disconnect(NOTIFY_DISCONNECT_DATA *data)
 {
     char *buffer;
-    asprintf(&buffer, "User%i disconnected\n", data->user_id);
+    asprintf(&buffer, "User%i disconnected: %s\n", data->user_id, data->reason);
     add_message(buffer);
 }
 

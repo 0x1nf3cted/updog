@@ -28,10 +28,11 @@ extern void send_message_packet(int fd, char *message);
 
 extern void notify_message_packet(int fd, int user_id, char *message);
 
-#define NOTIFY_DISCONNECT_PACKET(T)                                \
-    T(U16,      user_id);
+#define NOTIFY_DISCONNECT_PACKET(T)                             \
+    T(U16,      user_id);                                       \
+    T(STRING,   reason);
 
-extern void notify_disconnect_packet(int fd, int user_id);
+extern void notify_disconnect_packet(int fd, int user_id, char *reason);
 
 #define NOTIFY_CONNECT_PACKET(T)                                \
     T(U16,      user_id);

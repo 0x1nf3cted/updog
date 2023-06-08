@@ -40,13 +40,13 @@ Client *create_client(int sockfd, struct sockaddr_in client_addr) {
     return client;
 }
 
-void disconnect_client(Client *disconnected_client)
+void disconnect_client(Client *disconnected_client, char *reason)
 {
     TAILQ_REMOVE(&clients, disconnected_client, nodes);
     Client *client;
     TAILQ_FOREACH(client, &clients, nodes)
     {
-        notify_disconnect_packet(client->fd, disconnected_client->id);
+        notify_disconnect_packet(client->fd, disconnected_client->id, reason);
     }
     close(disconnected_client->fd);
     // TODO: free client name, ...
@@ -83,7 +83,7 @@ void client_handler(Client *client)
         }
         free(packet_data);
     }
-    disconnect_client(client);
+    disconnect_client(client, "connection closed");
 }
 
 void on_message(SEND_MESSAGE_DATA *data, Client *sender)
@@ -118,7 +118,7 @@ void check_heartbeats()
     {
         if (current_time - client->last_heartbeat > 2*PULSE_TIME) {
             pthread_cancel(client->thread);
-            disconnect_client(client);
+            disconnect_client(client, "timeout");
         }
     }
 }
