@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <signal.h>
 #include <time.h>
 #include <unistd.h>
 #include "protocol.h"
@@ -25,6 +26,8 @@ Client *create_client(int sockfd, struct sockaddr_in client_addr) {
     client->fd = sockfd;
     client->id = sockfd; // TODO
     client->address = client_addr;
+
+    time(&client->last_heartbeat);
     
     Client *current_client;
     TAILQ_FOREACH(current_client, &clients, nodes)
@@ -37,13 +40,17 @@ Client *create_client(int sockfd, struct sockaddr_in client_addr) {
     return client;
 }
 
-void disconnect_client(Client *disconnected_client)
+void disconnect_client(Client *disconnected_client, char *reason)
 {
+    TAILQ_REMOVE(&clients, disconnected_client, nodes);
     Client *client;
     TAILQ_FOREACH(client, &clients, nodes)
     {
-        notify_disconnect_packet(client->fd, disconnected_client->id);
+        notify_disconnect_packet(client->fd, disconnected_client->id, reason);
     }
+    close(disconnected_client->fd);
+    // TODO: free client name, ...
+    free(disconnected_client);
 }
 
 void client_handler(Client *client)
@@ -76,11 +83,7 @@ void client_handler(Client *client)
         }
         free(packet_data);
     }
-    TAILQ_REMOVE(&clients, client, nodes);
-    disconnect_client(client);
-    close(client->fd);
-    // TODO: free client name, ...
-    free(client);
+    disconnect_client(client, "connection closed");
 }
 
 void on_message(SEND_MESSAGE_DATA *data, Client *sender)
@@ -94,14 +97,61 @@ void on_message(SEND_MESSAGE_DATA *data, Client *sender)
     free(data->message);
 }
 
+void on_heartbeat(HEARTBEAT_DATA *data, Client *client)
+{
+    time(&client->last_heartbeat);
+}
+
 void setup_server_handlers()
 {
     packet_classes[SEND_MESSAGE]->handle_server = (void(*)(void*, Client *)) (void*)on_message;
+    packet_classes[HEARTBEAT]->handle_server = (void(*)(void*, Client *)) (void*)on_heartbeat;
+}
+
+void check_heartbeats()
+{
+    time_t current_time;
+    time(&current_time);
+
+    Client *client;
+    TAILQ_FOREACH(client, &clients, nodes)
+    {
+        if (current_time - client->last_heartbeat > 2*PULSE_TIME) {
+            pthread_cancel(client->thread);
+            disconnect_client(client, "timeout");
+        }
+    }
+}
+
+void setup_heartbeat_check()
+{
+    struct sigevent event;
+    event.sigev_notify = SIGEV_THREAD;
+    event.sigev_notify_function = check_heartbeats;
+    event.sigev_notify_attributes = NULL;
+
+    timer_t timer;
+    if (timer_create(CLOCK_MONOTONIC, &event, &timer) == -1) {
+        perror("timer_create");
+        exit(EXIT_FAILURE);
+    }
+
+    struct itimerspec timer_spec;
+    timer_spec.it_value.tv_sec = 2*PULSE_TIME;
+    timer_spec.it_value.tv_nsec = 0;
+    timer_spec.it_interval.tv_sec =  2*PULSE_TIME;
+    timer_spec.it_interval.tv_nsec = 0;
+
+    if (timer_settime(timer, 0, &timer_spec, NULL) == -1) {
+        perror("timer_settime");
+        exit(EXIT_FAILURE);
+    }
 }
 
 void start_server(int port) {
     TAILQ_INIT(&clients);
     setup_server_handlers();
+    setup_heartbeat_check();
     int server_sockfd = socket(AF_INET, SOCK_STREAM, 0);
 
     struct sockaddr_in client_addr;

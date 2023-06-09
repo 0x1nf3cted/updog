@@ -14,14 +14,19 @@ void notify_message_packet(int fd, int user_id, char *message)
     send_packet(fd, NOTIFY_MESSAGE, user_id, message);
 }
 
-void notify_disconnect_packet(int fd, int user_id)
+void notify_disconnect_packet(int fd, int user_id, char *reason)
 {
-    send_packet(fd, NOTIFY_DISCONNECT, user_id);
+    send_packet(fd, NOTIFY_DISCONNECT, user_id, reason);
 }
 
 void notify_connect_packet(int fd, int user_id)
 {
     send_packet(fd, NOTIFY_CONNECT, user_id);
+}
+
+void heartbeat_packet(int fd)
+{
+    send_packet(fd, HEARTBEAT);
 }
 
 PACKET_TYPES(CLASS, )

@@ -67,7 +67,7 @@ void on_notify_connect(NOTIFY_DISCONNECT_DATA *data)
 void on_notify_disconnect(NOTIFY_DISCONNECT_DATA *data)
 {
     char *buffer;
-    asprintf(&buffer, "User%i disconnected\n", data->user_id);
+    asprintf(&buffer, "User%i disconnected: %s\n", data->user_id, data->reason);
     add_message(buffer);
 }
 
@@ -78,9 +78,40 @@ void setup_client_handlers()
     packet_classes[NOTIFY_CONNECT]->handle_client = (void(*)(void*)) (void*)on_notify_connect;
 }
 
+void do_heartbeat()
+{
+    heartbeat_packet(sockfd);
+}
+
+void setup_heartbeat()
+{
+    struct sigevent event;
+    event.sigev_notify = SIGEV_THREAD;
+    event.sigev_notify_function = do_heartbeat;
+    event.sigev_notify_attributes = NULL;
+
+    timer_t timer;
+    if (timer_create(CLOCK_MONOTONIC, &event, &timer) == -1) {
+        perror("timer_create");
+        exit(EXIT_FAILURE);
+    }
+
+    struct itimerspec timer_spec;
+    timer_spec.it_value.tv_sec = PULSE_TIME;
+    timer_spec.it_value.tv_nsec = 0;
+    timer_spec.it_interval.tv_sec = PULSE_TIME;
+    timer_spec.it_interval.tv_nsec = 0;
+
+    if (timer_settime(timer, 0, &timer_spec, NULL) == -1) {
+        perror("timer_settime");
+        exit(EXIT_FAILURE);
+    }
+}
+
 
 void start_client(char *address, int port)
 {
+    setup_heartbeat();
     setup_client_handlers();
     TAILQ_INIT(&all_messages);
 
