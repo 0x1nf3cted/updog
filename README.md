@@ -6,29 +6,21 @@ Updog is a chat app written in c, it can listen to upcoming connections from 1 c
 
 ## Run:
 
--   use the script:
+### Prerequisit:
 
-`mkdir build` if build doesn't exist
+you should have cmake installed in your system
 
-then:
+**for linux**:
 
-server side : `bash ./run.sh -l [port]`
+`sudo apt-get install cmake`
 
-client side: `bash ./run.sh -c [ipAdress] [port]`
+then run: 
 
+```shell
+chmod +x ./run.sh
+./run.sh [file_name]  # for now dix only support absolute paths (ex: /home/user/path/to/file/file.txt) this will open file.txt
+```
 
-or
-
-
--   build it manually:
-
-`mkdir build`
-
-`cmake ..`
-
-`make`
-
-`./updog`
 
 
 
@@ -42,6 +34,8 @@ or
 -   [x] multiple clients to connect to a server
 -   [x] user can send multiple messages to the server
 -   [x] stop the connection when the client is inactive for 1min
+-   [x] make the user disconnect when he type /q after ensuring the message was sent succesfully (Bug)
+
 
 
 ### Features:
@@ -53,7 +47,6 @@ or
 
 
 ### Todo:
--   [ ] make the user disconnect when he type /q after ensuring the message was sent succesfully (Bug)
 
 ❤️you're more than welcome to contribute❤️
 
